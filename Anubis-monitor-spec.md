@@ -104,14 +104,20 @@ Configuration is defined in a YAML file.
 refresh: 10
 
 instances:
-  - name: Wiki
-    url: http://127.0.0.1:9090/metrics
 
-  - name: Forum
-    url: http://127.0.0.1:9091/metrics
+# brianr infra testing
+  - name: mesdb
+    url:http://127.0.0.1:13002/metrics
 
-  - name: Gitea
-    url: http://127.0.0.1:9092/metrics
+# Closer to final values when intergrated into Koozali infra
+#  - name: Wiki
+#    url: http://127.0.0.1:9090/metrics
+
+#  - name: Forum
+#    url: http://127.0.0.1:9091/metrics
+
+#  - name: Gitea
+#    url: http://127.0.0.1:9092/metrics
 ```
 
 ### Fields

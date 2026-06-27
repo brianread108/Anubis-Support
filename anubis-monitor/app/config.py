@@ -16,8 +16,10 @@ class AppConfig:
     refresh: int = 10
     instances: list[InstanceConfig] = None
 
+from pathlib import Path
+from typing import Union
 
-def load_config(path: str | Path) -> AppConfig:
+def load_config(path: Union[str, Path]) -> AppConfig:
     path = Path(path)
     raw: dict[str, Any] = {}
     if path.exists():

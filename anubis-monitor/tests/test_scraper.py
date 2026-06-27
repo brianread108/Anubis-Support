@@ -1,0 +1,1 @@
+# tests/test_scraper.py\nimport asyncio\nimport httpx\n\nasync def scrape(url, timeout=5):\n    async with httpx.AsyncClient(timeout=timeout) as client:\n        resp = await client.get(url)\n        resp.raise_for_status()\n        return resp.text\n

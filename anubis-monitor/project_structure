@@ -1,0 +1,15 @@
+Anubis-monitor/
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   ├── scraper.py
+│   ├── parser.py
+│   ├── state.py
+│   ├── templates/
+│   └── static/
+├── config.yaml
+├── SPEC.md
+├── README.md
+├── pyproject.toml
+└── requirements.txt

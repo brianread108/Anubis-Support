@@ -1,0 +1,1 @@
+# app/state.py\nfrom dataclasses import dataclass, field\nfrom datetime import datetime\n\n@dataclass\nclass InstanceStatus:\n    name: str\n    url: str\n    healthy: bool = False\n    last_seen: datetime | None = None\n    error: str | None = None\n    metrics: dict = field(default_factory=dict)\n

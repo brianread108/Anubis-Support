@@ -1,0 +1,5 @@
+refresh: 10
+
+instances:
+  - name: mesdb
+    url: http://127.0.0.1:13002/metrics

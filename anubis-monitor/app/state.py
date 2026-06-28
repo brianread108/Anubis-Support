@@ -1,1 +1,22 @@
-# app/state.py\nfrom dataclasses import dataclass, field\nfrom datetime import datetime\n\n@dataclass\nclass InstanceStatus:\n    name: str\n    url: str\n    healthy: bool = False\n    last_seen: datetime | None = None\n    error: str | None = None\n    metrics: dict = field(default_factory=dict)\n
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Dict, List, Optional
+
+
+@dataclass
+class InstanceStatus:
+    name: str
+    url: str
+    healthy: bool = False
+    last_seen: Optional[datetime] = None
+    error: Optional[str] = None
+    metrics: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class MonitorState:
+    last_updated: Optional[datetime] = None
+    instances: List[InstanceStatus] = field(default_factory=list)
+
+
+STATE = MonitorState()

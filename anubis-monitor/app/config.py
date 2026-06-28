@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import List, Optional, Union
 
 import yaml
 
@@ -14,26 +14,23 @@ class InstanceConfig:
 @dataclass
 class AppConfig:
     refresh: int = 10
-    instances: list[InstanceConfig] = None
+    instances: List[InstanceConfig] = field(default_factory=list)
 
-from pathlib import Path
-from typing import Union
 
 def load_config(path: Union[str, Path]) -> AppConfig:
     path = Path(path)
-    raw: dict[str, Any] = {}
+    raw = {}
+
     if path.exists():
         with path.open("r", encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
 
-    instances = [
-        InstanceConfig(
-            name=item["name"],
-            url=item["url"],
-        )
-        for item in raw.get("instances", [])
-        if item.get("name") and item.get("url")
-    ]
+    instances = []
+    for item in raw.get("instances", []):
+        name = item.get("name")
+        url = item.get("url")
+        if name and url:
+            instances.append(InstanceConfig(name=name, url=url))
 
     return AppConfig(
         refresh=int(raw.get("refresh", 10)),

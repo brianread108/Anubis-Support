@@ -1,1 +1,17 @@
-# app/parser.py\ndef parse_prometheus_text(text):\n    # minimal parser stub: returns dict of metric->value\n    metrics = {}\n    for line in text.splitlines():\n        if line.startswith('#') or not line.strip():\n            continue\n        parts = line.split()\n        if len(parts) >= 2:\n            metrics[parts[0]] = float(parts[1])\n    return metrics\n
+from typing import Dict
+
+
+def parse_prometheus_text(text: str) -> Dict[str, float]:
+    metrics = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        try:
+            metrics[parts[0]] = float(parts[1])
+        except ValueError:
+            continue
+    return metrics

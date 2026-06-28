@@ -1,16 +1,17 @@
-from __future__ import annotations
+from datetime import datetime
+from pathlib import Path
+from typing import List
 
 import asyncio
-from datetime import datetime, timezone
-from pathlib import Path
-
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.config import load_config
+from app.config import AppConfig, InstanceConfig, load_config
+from app.parser import parse_prometheus_text
 from app.scraper import scrape_metrics
+from app.state import InstanceStatus, STATE
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config.yaml"
@@ -21,60 +22,44 @@ app = FastAPI(title="Anubis Monitor")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-state = {
-    "last_updated": None,
-    "instances": [],
-}
+
+def status_label(status: InstanceStatus) -> str:
+    if status.healthy:
+        return "healthy"
+    if status.error:
+        return "down"
+    return "degraded"
 
 
-def parse_metrics(text: str) -> dict[str, float]:
-    metrics: dict[str, float] = {}
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split()
-        if len(parts) < 2:
-            continue
-        try:
-            metrics[parts[0]] = float(parts[1])
-        except ValueError:
-            continue
-    return metrics
-
-
-async def poll_instance(name: str, url: str, timeout: float = 5.0) -> dict:
+async def poll_instance(instance: InstanceConfig) -> InstanceStatus:
     try:
-        raw = await scrape_metrics(url, timeout=timeout)
-        metrics = parse_metrics(raw)
-        return {
-            "name": name,
-            "url": url,
-            "healthy": True,
-            "last_seen": datetime.now(timezone.utc),
-            "error": None,
-            "metrics": metrics,
-        }
+        text = await scrape_metrics(instance.url, timeout=5.0)
+        metrics = parse_prometheus_text(text)
+        return InstanceStatus(
+            name=instance.name,
+            url=instance.url,
+            healthy=True,
+            last_seen=datetime.utcnow(),
+            error=None,
+            metrics=metrics,
+        )
     except Exception as exc:
-        return {
-            "name": name,
-            "url": url,
-            "healthy": False,
-            "last_seen": None,
-            "error": str(exc),
-            "metrics": {},
-        }
+        return InstanceStatus(
+            name=instance.name,
+            url=instance.url,
+            healthy=False,
+            last_seen=None,
+            error=str(exc),
+            metrics={},
+        )
 
 
 async def refresh_state() -> None:
     config = load_config(CONFIG_PATH)
-    tasks = [
-        poll_instance(instance.name, instance.url, timeout=5.0)
-        for instance in config.instances
-    ]
+    tasks = [poll_instance(instance) for instance in config.instances]
     results = await asyncio.gather(*tasks) if tasks else []
-    state["instances"] = results
-    state["last_updated"] = datetime.now(timezone.utc)
+    STATE.instances = results
+    STATE.last_updated = datetime.utcnow()
 
 
 @app.on_event("startup")
@@ -85,15 +70,16 @@ async def startup_event() -> None:
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     config = load_config(CONFIG_PATH)
-    if not state["instances"] and config.instances:
+    if not STATE.instances and config.instances:
         await refresh_state()
 
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "instances": state["instances"],
+            "instances": STATE.instances,
             "refresh": config.refresh,
-            "last_updated": state["last_updated"],
+            "last_updated": STATE.last_updated,
+            "status_label": status_label,
         },
     )

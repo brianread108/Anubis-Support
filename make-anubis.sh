@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 <name> <port> [--target <url>] [--difficulty <1-10>]"
+  echo "Usage: $0 <name> <port> [--target <url>] [--difficulty <1-10>] [--monitor-url <url>] [--monitor-refresh <seconds>]"
   exit 1
 }
 
@@ -15,6 +15,14 @@ shift 2
 
 TARGET="https://mail.bjsystems.co.uk:443"
 DIFFICULTY="3"
+MONITOR_URL="http://127.0.0.1:8000"
+MONITOR_REFRESH="10"
+MONITOR_USER="anubis-monitor"
+MONITOR_GROUP="anubis-monitor"
+MONITOR_DIR="/opt/anubis-monitor"
+MONITOR_VENV="${MONITOR_DIR}/.venv"
+MONITOR_SERVICE="/etc/systemd/system/anubis-monitor.service"
+MONITOR_CONFIG="${MONITOR_DIR}/config.yaml"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -26,6 +34,16 @@ while [[ $# -gt 0 ]]; do
     --difficulty)
       [[ $# -lt 2 ]] && usage
       DIFFICULTY="$2"
+      shift 2
+      ;;
+    --monitor-url)
+      [[ $# -lt 2 ]] && usage
+      MONITOR_URL="$2"
+      shift 2
+      ;;
+    --monitor-refresh)
+      [[ $# -lt 2 ]] && usage
+      MONITOR_REFRESH="$2"
       shift 2
       ;;
     *)
@@ -41,6 +59,11 @@ fi
 
 if ! [[ "$DIFFICULTY" =~ ^[0-9]+$ ]] || (( DIFFICULTY < 1 || DIFFICULTY > 10 )); then
   echo "Error: difficulty must be 1-10"
+  exit 1
+fi
+
+if ! [[ "$MONITOR_REFRESH" =~ ^[0-9]+$ ]] || (( MONITOR_REFRESH < 1 )); then
+  echo "Error: monitor refresh must be >= 1"
   exit 1
 fi
 
@@ -64,6 +87,10 @@ fi
 
 if ! id anubis >/dev/null 2>&1; then
   useradd -r -s /usr/sbin/nologin -d /nonexistent anubis
+fi
+
+if ! id "${MONITOR_USER}" >/dev/null 2>&1; then
+  useradd -r -s /usr/sbin/nologin -d "${MONITOR_DIR}" "${MONITOR_USER}"
 fi
 
 mkdir -p "$CONF_DIR"
@@ -102,7 +129,7 @@ status_codes:
 
 logging:
   sink: stdio
-  level: DEBUG
+  level: INFO
 EOF
 
 cat > "$ENV_FILE" <<EOF
@@ -138,11 +165,100 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
+mkdir -p "$MONITOR_DIR"
+if [[ ! -f "${MONITOR_CONFIG}" ]]; then
+  cat > "$MONITOR_CONFIG" <<EOF
+refresh: ${MONITOR_REFRESH}
+
+instances:
+  - name: ${NAME}
+    url: http://127.0.0.1:${METRICS_PORT}/metrics
+EOF
+elif grep -qE "^[[:space:]]*name:[[:space:]]*${NAME}[[:space:]]*$" "$MONITOR_CONFIG"; then
+  python3 - "$MONITOR_CONFIG" "$NAME" "$METRICS_PORT" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+name = sys.argv[2]
+port = sys.argv[3]
+lines = path.read_text().splitlines()
+out = []
+i = 0
+replaced = False
+while i < len(lines):
+    line = lines[i]
+    if line.strip() == f"- name: {name}":
+        out.append(line)
+        i += 1
+        while i < len(lines) and lines[i].startswith("    "):
+            i += 1
+        out.append(f"    url: http://127.0.0.1:{port}/metrics")
+        replaced = True
+        continue
+    out.append(line)
+    i += 1
+if not replaced:
+    out = lines
+path.write_text("\n".join(out) + "\n")
+PY
+else
+  cat >> "$MONITOR_CONFIG" <<EOF
+
+  - name: ${NAME}
+    url: http://127.0.0.1:${METRICS_PORT}/metrics
+EOF
+fi
+
 chown anubis:anubis "$ENV_FILE" "$POLICY_FILE"
 chmod 0640 "$ENV_FILE" "$POLICY_FILE"
 chmod 0644 "$UNIT_FILE"
 
+cat > "$MONITOR_SERVICE" <<EOF
+[Unit]
+Description=Anubis Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=${MONITOR_USER}
+Group=${MONITOR_GROUP}
+WorkingDirectory=${MONITOR_DIR}
+Environment=PYTHONUNBUFFERED=1
+ExecStart=${MONITOR_VENV}/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+chown "${MONITOR_USER}:${MONITOR_USER}" "$MONITOR_SERVICE" 2>/dev/null || true
+chmod 0644 "$MONITOR_SERVICE"
+
 systemctl daemon-reload
 systemctl enable --now "${NAME}-anubis.service"
+systemctl restart "${NAME}-anubis.service"
 
-echo "Created and started ${NAME}-anubis.service"
+systemctl enable --now anubis-monitor.service
+systemctl restart anubis-monitor.service
+
+if systemctl is-active --quiet "${NAME}-anubis.service"; then
+  echo "Started/restarted ${NAME}-anubis.service"
+else
+  echo "Error: ${NAME}-anubis.service failed to start"
+  systemctl --no-pager -l status "${NAME}-anubis.service" || true
+  exit 1
+fi
+
+if systemctl is-active --quiet anubis-monitor.service; then
+  echo "Started/restarted anubis-monitor.service"
+else
+  echo "Error: anubis-monitor.service failed to start"
+  systemctl --no-pager -l status anubis-monitor.service || true
+  exit 1
+fi
+
+echo "Monitor config updated at ${MONITOR_CONFIG}"

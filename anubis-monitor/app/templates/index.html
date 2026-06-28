@@ -6,14 +6,17 @@
   <title>Anubis Monitor</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; }
-    th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: left; vertical-align: top; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+    th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: left; vertical-align: middle; }
     .healthy { color: green; }
     .degraded { color: orange; }
     .down { color: red; }
     .muted { color: #666; }
     .error { color: #b00020; }
-    .policy { font-size: 0.95em; }
+    .mini { font-size: 0.92em; white-space: nowrap; }
+    .nowrap { white-space: nowrap; }
+    details { margin-top: 0.25rem; }
+    summary { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -25,55 +28,67 @@
 
   <p class="muted">Last updated: {{ last_updated if last_updated is not none else '-' }}</p>
 
-  {% for inst in instances %}
-    <h2>{{ inst.name }}</h2>
-    <p>
-      Status:
-      <span class="{{ status_label(inst) }}">{{ status_label(inst) }}</span>
-      | URL: {{ inst.url }}
-      | Last seen: {{ inst.last_seen if inst.last_seen is not none else '-' }}
-      | Error: {{ inst.error if inst.error is not none else '-' }}
-    </p>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Proxied requests total</th>
-          <th>Challenges issued</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>{{ inst.request_total if inst.request_total is not none else '-' }}</td>
-          <td>{{ inst.challenge_issued if inst.challenge_issued is not none else '-' }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <table class="policy">
-      <thead>
-        <tr>
-          <th>Action</th>
-          <th>Rule</th>
-          <th>Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if inst.policy_rows %}
-          {% for row in inst.policy_rows %}
-            <tr>
-              <td>{{ row.action }}</td>
-              <td>{{ row.rule }}</td>
-              <td>{{ row.value }}</td>
-            </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="3">-</td>
-          </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  {% endfor %}
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Name</th>
+        <th>Requests</th>
+        <th>Challenges</th>
+        <th>ALLOW</th>
+        <th>CHALLENGE</th>
+        <th>DENY</th>
+        <th>Last seen</th>
+        <th>Error</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inst in instances %}
+      <tr>
+        <td class="nowrap">{{ status_icon(inst) }} <span class="{{ status_label(inst) }}">{{ status_label(inst) }}</span></td>
+        <td>
+          {{ inst.name }}
+          <div class="mini muted">{{ inst.url }}</div>
+        </td>
+        <td>{{ fmt_value(inst.request_total) }}</td>
+        <td>{{ fmt_value(inst.challenge_issued) }}</td>
+        <td>{{ fmt_value(inst.policy_counts.get('ALLOW')) }}</td>
+        <td>{{ fmt_value(inst.policy_counts.get('CHALLENGE')) }}</td>
+        <td>{{ fmt_value(inst.policy_counts.get('DENY')) }}</td>
+        <td>{{ inst.last_seen if inst.last_seen is not none else '-' }}</td>
+        <td>{{ inst.error if inst.error is not none else '-' }}</td>
+      </tr>
+      <tr>
+        <td colspan="9">
+          <details>
+            <summary>Policy details</summary>
+            {% if inst.policy_rows %}
+            <table>
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Rule</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in inst.policy_rows %}
+                <tr>
+                  <td>{{ row.action }}</td>
+                  <td>{{ row.rule }}</td>
+                  <td>{{ fmt_value(row.value) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+              <div class="muted">No policy samples found.</div>
+            {% endif %}
+          </details>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </body>
 </html>

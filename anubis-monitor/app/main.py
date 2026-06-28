@@ -38,15 +38,31 @@ def status_label(status):
     return "degraded"
 
 
-def _policy_rows(policy_results):
-    rows = []
-    for (action, rule), value in sorted(policy_results.items()):
-        rows.append({
-            "action": action,
-            "rule": rule,
-            "value": value,
-        })
-    return rows
+def status_icon(status):
+    label = status_label(status)
+    if label == "healthy":
+        return "🟢"
+    if label == "degraded":
+        return "🟠"
+    return "🔴"
+
+
+def fmt_value(value):
+    if value is None:
+        return "-"
+    if isinstance(value, float):
+        if value.is_integer():
+            return str(int(value))
+        return "{:.3f}".format(value)
+    return str(value)
+
+
+def _policy_summary(policy_results):
+    counts = {"ALLOW": 0.0, "CHALLENGE": 0.0, "DENY": 0.0}
+    for (action, rule), value in policy_results.items():
+        if action in counts and isinstance(value, (int, float)):
+            counts[action] += value
+    return counts
 
 
 async def poll_instance(instance, timeout):
@@ -122,16 +138,26 @@ async def index(request: Request):
     for inst in STATE.instances:
         summary = inst.summary or {}
         policy_results = summary.get("policy_results", {})
-        view_instances.append({
-            "name": inst.name,
-            "url": inst.url,
-            "healthy": inst.healthy,
-            "last_seen": inst.last_seen,
-            "error": inst.error,
-            "request_total": summary.get("request_total"),
-            "challenge_issued": summary.get("challenge_issued"),
-            "policy_rows": _policy_rows(policy_results),
-        })
+        view_instances.append(
+            {
+                "name": inst.name,
+                "url": inst.url,
+                "healthy": inst.healthy,
+                "last_seen": inst.last_seen,
+                "error": inst.error,
+                "request_total": summary.get("request_total"),
+                "challenge_issued": summary.get("challenge_issued"),
+                "policy_counts": _policy_summary(policy_results),
+                "policy_rows": [
+                    {
+                        "action": action,
+                        "rule": rule,
+                        "value": value,
+                    }
+                    for (action, rule), value in sorted(policy_results.items())
+                ],
+            }
+        )
 
     return templates.TemplateResponse(
         "index.html",
@@ -142,5 +168,7 @@ async def index(request: Request):
             "last_updated": STATE.last_updated,
             "config_error": STATE.config_error,
             "status_label": status_label,
+            "status_icon": status_icon,
+            "fmt_value": fmt_value,
         },
     )

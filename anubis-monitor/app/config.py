@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Union
 
 import yaml
 
@@ -14,6 +14,7 @@ class InstanceConfig:
 @dataclass
 class AppConfig:
     refresh: int = 10
+    timeout: float = 5.0
     instances: List[InstanceConfig] = field(default_factory=list)
 
 
@@ -34,5 +35,6 @@ def load_config(path: Union[str, Path]) -> AppConfig:
 
     return AppConfig(
         refresh=int(raw.get("refresh", 10)),
+        timeout=float(raw.get("timeout", 5.0)),
         instances=instances,
     )

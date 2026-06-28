@@ -7,15 +7,22 @@
   <style>
     body { font-family: sans-serif; margin: 2rem; }
     table { border-collapse: collapse; width: 100%; }
-    th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: left; }
+    th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: left; vertical-align: top; }
     .healthy { color: green; }
     .degraded { color: orange; }
     .down { color: red; }
+    .muted { color: #666; }
+    .error { color: #b00020; }
   </style>
 </head>
 <body>
   <h1>Anubis Monitor</h1>
-  <p>Last updated: {{ last_updated }}</p>
+
+  {% if config_error %}
+    <p class="error">Config/runtime error: {{ config_error }}</p>
+  {% endif %}
+
+  <p class="muted">Last updated: {{ last_updated }}</p>
 
   <table>
     <thead>
@@ -23,6 +30,11 @@
         <th>Name</th>
         <th>Status</th>
         <th>Last seen</th>
+        <th>Requests/sec</th>
+        <th>Challenges/sec</th>
+        <th>Success rate</th>
+        <th>Failure rate</th>
+        <th>Backend latency</th>
         <th>Error</th>
       </tr>
     </thead>
@@ -32,6 +44,11 @@
         <td>{{ inst.name }}</td>
         <td class="{{ status_label(inst) }}">{{ status_label(inst) }}</td>
         <td>{{ inst.last_seen }}</td>
+        <td>{{ inst.summary.get('request_rate') }}</td>
+        <td>{{ inst.summary.get('challenge_rate') }}</td>
+        <td>{{ inst.summary.get('success_rate') }}</td>
+        <td>{{ inst.summary.get('failure_rate') }}</td>
+        <td>{{ inst.summary.get('backend_latency') }}</td>
         <td>{{ inst.error }}</td>
       </tr>
       {% endfor %}

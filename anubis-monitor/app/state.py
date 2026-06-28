@@ -11,12 +11,14 @@ class InstanceStatus:
     last_seen: Optional[datetime] = None
     error: Optional[str] = None
     metrics: Dict[str, float] = field(default_factory=dict)
+    summary: Dict[str, Optional[float]] = field(default_factory=dict)
 
 
 @dataclass
 class MonitorState:
     last_updated: Optional[datetime] = None
     instances: List[InstanceStatus] = field(default_factory=list)
+    config_error: Optional[str] = None
 
 
 STATE = MonitorState()

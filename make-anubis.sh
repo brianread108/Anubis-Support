@@ -225,7 +225,8 @@ User=${MONITOR_USER}
 Group=${MONITOR_GROUP}
 WorkingDirectory=${MONITOR_DIR}
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/local/bin/uvicorn --app-dir ${MONITOR_DIR} app.main:app --host 0.0.0.0 --port 8000Restart=always
+ExecStart=/usr/local/bin/uvicorn --app-dir ${MONITOR_DIR} app.main:app --host 0.0.0.0 --port 8000
+Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal

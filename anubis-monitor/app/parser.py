@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 def _safe_float(value: str) -> Optional[float]:
@@ -6,6 +6,12 @@ def _safe_float(value: str) -> Optional[float]:
         return float(value)
     except ValueError:
         return None
+
+
+def _metric_name(sample_name: str) -> str:
+    if "{" in sample_name:
+        return sample_name.split("{", 1)[0]
+    return sample_name
 
 
 def parse_prometheus_text(text: str) -> Dict[str, float]:
@@ -20,7 +26,7 @@ def parse_prometheus_text(text: str) -> Dict[str, float]:
         if len(parts) < 2:
             continue
 
-        name = parts[0]
+        name = _metric_name(parts[0])
         value = _safe_float(parts[1])
         if value is None:
             continue
@@ -30,7 +36,7 @@ def parse_prometheus_text(text: str) -> Dict[str, float]:
     return metrics
 
 
-def _find_metric(metrics: Dict[str, float], names) -> Optional[float]:
+def _find_metric(metrics: Dict[str, float], names: List[str]) -> Optional[float]:
     for name in names:
         if name in metrics:
             return metrics[name]
@@ -41,6 +47,7 @@ def extract_anubis_summary(metrics: Dict[str, float]) -> Dict[str, Optional[floa
     request_rate = _find_metric(
         metrics,
         [
+            "anubis_proxied_requests_total",
             "anubis_requests_total",
             "anubis_request_total",
             "anubis_requests_per_second",
@@ -78,6 +85,12 @@ def extract_anubis_summary(metrics: Dict[str, float]) -> Dict[str, Optional[floa
             "anubis_request_duration_seconds",
         ],
     )
+    policy_results = _find_metric(
+        metrics,
+        [
+            "anubis_policy_results",
+        ],
+    )
 
     return {
         "request_rate": request_rate,
@@ -85,4 +98,5 @@ def extract_anubis_summary(metrics: Dict[str, float]) -> Dict[str, Optional[floa
         "success_rate": success_rate,
         "failure_rate": failure_rate,
         "backend_latency": backend_latency,
+        "policy_results": policy_results,
     }

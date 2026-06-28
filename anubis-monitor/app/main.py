@@ -1,17 +1,14 @@
-from __future__ import annotations
-
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.config import AppConfig, InstanceConfig, load_config
+from app.config import load_config
 from app.parser import extract_anubis_summary, parse_prometheus_text
 from app.scraper import scrape_metrics
 from app.state import InstanceStatus, STATE

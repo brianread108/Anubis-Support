@@ -6,6 +6,42 @@ usage() {
   exit 1
 }
 
+update_monitor_config() {
+  local cfg_file="$1"
+  local inst_name="$2"
+  local inst_url="$3"
+  local refresh_value="$4"
+
+  python3 - "$cfg_file" "$inst_name" "$inst_url" "$refresh_value" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+
+cfg_file = Path(sys.argv[1])
+inst_name = sys.argv[2]
+inst_url = sys.argv[3]
+refresh_value = int(sys.argv[4])
+
+data = {}
+if cfg_file.exists():
+    with cfg_file.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+
+instances = data.get("instances", [])
+if not isinstance(instances, list):
+    instances = []
+
+instances = [i for i in instances if isinstance(i, dict) and i.get("name") != inst_name]
+instances.append({"name": inst_name, "url": inst_url})
+
+data["refresh"] = refresh_value
+data["instances"] = instances
+
+with cfg_file.open("w", encoding="utf-8") as f:
+    yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+PY
+}
+
 NAME="${1:-}"
 PORT="${2:-}"
 
@@ -17,8 +53,8 @@ TARGET="https://mail.bjsystems.co.uk:443"
 DIFFICULTY="3"
 MONITOR_URL="http://127.0.0.1:8000"
 MONITOR_REFRESH="10"
-MONITOR_USER="root" #"anubis-monitor"
-MONITOR_GROUP="root" #"anubis-monitor"
+MONITOR_USER="root"
+MONITOR_GROUP="root"
 MONITOR_DIR="/root/Anubis-Support/anubis-monitor"
 MONITOR_VENV="${MONITOR_DIR}/.venv"
 MONITOR_SERVICE="/etc/systemd/system/anubis-monitor.service"
@@ -166,49 +202,7 @@ WantedBy=multi-user.target
 EOF
 
 mkdir -p "$MONITOR_DIR"
-if [[ ! -f "${MONITOR_CONFIG}" ]]; then
-  cat > "$MONITOR_CONFIG" <<EOF
-refresh: ${MONITOR_REFRESH}
-
-instances:
-  - name: ${NAME}
-    url: http://127.0.0.1:${METRICS_PORT}/metrics
-EOF
-elif grep -qE "^[[:space:]]*name:[[:space:]]*${NAME}[[:space:]]*$" "$MONITOR_CONFIG"; then
-  python3 - "$MONITOR_CONFIG" "$NAME" "$METRICS_PORT" <<'PY'
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-name = sys.argv[2]
-port = sys.argv[3]
-lines = path.read_text().splitlines()
-out = []
-i = 0
-replaced = False
-while i < len(lines):
-    line = lines[i]
-    if line.strip() == f"- name: {name}":
-        out.append(line)
-        i += 1
-        while i < len(lines) and lines[i].startswith("    "):
-            i += 1
-        out.append(f"    url: http://127.0.0.1:{port}/metrics")
-        replaced = True
-        continue
-    out.append(line)
-    i += 1
-if not replaced:
-    out = lines
-path.write_text("\n".join(out) + "\n")
-PY
-else
-  cat >> "$MONITOR_CONFIG" <<EOF
-
-  - name: ${NAME}
-    url: http://127.0.0.1:${METRICS_PORT}/metrics
-EOF
-fi
+update_monitor_config "$MONITOR_CONFIG" "$NAME" "http://127.0.0.1:${METRICS_PORT}/metrics" "$MONITOR_REFRESH"
 
 chown anubis:anubis "$ENV_FILE" "$POLICY_FILE"
 chmod 0640 "$ENV_FILE" "$POLICY_FILE"

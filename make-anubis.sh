@@ -223,7 +223,7 @@ After=network.target
 Type=simple
 User=${MONITOR_USER}
 Group=${MONITOR_GROUP}
-WorkingDirectory=${MONITOR_DIR}
+WorkingDirectory=${MONITOR_DIR}/anubis-monitor
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/local/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 Restart=always

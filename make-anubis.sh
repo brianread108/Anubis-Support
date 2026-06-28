@@ -19,7 +19,7 @@ MONITOR_URL="http://127.0.0.1:8000"
 MONITOR_REFRESH="10"
 MONITOR_USER="root" #"anubis-monitor"
 MONITOR_GROUP="root" #"anubis-monitor"
-MONITOR_DIR="/root/Anubis-support/anubis-monitor"
+MONITOR_DIR="/root/Anubis-Support/anubis-monitor"
 MONITOR_VENV="${MONITOR_DIR}/.venv"
 MONITOR_SERVICE="/etc/systemd/system/anubis-monitor.service"
 MONITOR_CONFIG="${MONITOR_DIR}/config.yaml"
@@ -223,10 +223,9 @@ After=network.target
 Type=simple
 User=${MONITOR_USER}
 Group=${MONITOR_GROUP}
-WorkingDirectory=${MONITOR_DIR}/anubis-monitor
+WorkingDirectory=${MONITOR_DIR}
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/local/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
-Restart=always
+ExecStart=/usr/local/bin/uvicorn --app-dir ${MONITOR_DIR} app.main:app --host 0.0.0.0 --port 8000Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal

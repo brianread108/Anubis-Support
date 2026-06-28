@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -10,8 +10,8 @@ class InstanceStatus:
     healthy: bool = False
     last_seen: Optional[datetime] = None
     error: Optional[str] = None
-    metrics: Dict[str, float] = field(default_factory=dict)
-    summary: Dict[str, Optional[float]] = field(default_factory=dict)
+    raw_samples: List[Dict[str, object]] = field(default_factory=list)
+    summary: Dict[str, object] = field(default_factory=dict)
 
 
 @dataclass

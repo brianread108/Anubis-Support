@@ -21,26 +21,46 @@ STATIC_DIR = BASE_DIR / "app" / "static"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
+def _get_value(obj, key, default=None):
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
 def status_label(status):
-    if status.healthy:
+    healthy = _get_value(status, "healthy", False)
+    error = _get_value(status, "error", None)
+
+    if healthy:
         return "healthy"
-    if status.error:
+    if error:
         return "down"
     return "degraded"
+
+
+def _policy_rows(policy_results):
+    rows = []
+    for (action, rule), value in sorted(policy_results.items()):
+        rows.append({
+            "action": action,
+            "rule": rule,
+            "value": value,
+        })
+    return rows
 
 
 async def poll_instance(instance, timeout):
     try:
         text = await scrape_metrics(instance.url, timeout=timeout)
-        metrics = parse_prometheus_text(text)
-        summary = extract_anubis_summary(metrics)
+        samples = parse_prometheus_text(text)
+        summary = extract_anubis_summary(samples)
         return InstanceStatus(
             name=instance.name,
             url=instance.url,
             healthy=True,
             last_seen=datetime.utcnow(),
             error=None,
-            metrics=metrics,
+            raw_samples=samples,
             summary=summary,
         )
     except Exception as exc:
@@ -50,7 +70,7 @@ async def poll_instance(instance, timeout):
             healthy=False,
             last_seen=None,
             error=str(exc),
-            metrics={},
+            raw_samples=[],
             summary={},
         )
 
@@ -98,11 +118,26 @@ async def index(request: Request):
     if not STATE.instances and config.instances:
         await refresh_state()
 
+    view_instances = []
+    for inst in STATE.instances:
+        summary = inst.summary or {}
+        policy_results = summary.get("policy_results", {})
+        view_instances.append({
+            "name": inst.name,
+            "url": inst.url,
+            "healthy": inst.healthy,
+            "last_seen": inst.last_seen,
+            "error": inst.error,
+            "request_total": summary.get("request_total"),
+            "challenge_issued": summary.get("challenge_issued"),
+            "policy_rows": _policy_rows(policy_results),
+        })
+
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "instances": STATE.instances,
+            "instances": view_instances,
             "refresh": config.refresh,
             "last_updated": STATE.last_updated,
             "config_error": STATE.config_error,

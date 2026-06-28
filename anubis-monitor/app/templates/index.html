@@ -6,13 +6,14 @@
   <title>Anubis Monitor</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
-    table { border-collapse: collapse; width: 100%; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; }
     th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: left; vertical-align: top; }
     .healthy { color: green; }
     .degraded { color: orange; }
     .down { color: red; }
     .muted { color: #666; }
     .error { color: #b00020; }
+    .policy { font-size: 0.95em; }
   </style>
 </head>
 <body>
@@ -22,39 +23,57 @@
     <p class="error">Config/runtime error: {{ config_error }}</p>
   {% endif %}
 
-  <p class="muted">Last updated: {{ last_updated }}</p>
+  <p class="muted">Last updated: {{ last_updated if last_updated is not none else '-' }}</p>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Status</th>
-        <th>Last seen</th>
-        <th>Requests/sec</th>
-        <th>Challenges/sec</th>
-        <th>Success rate</th>
-        <th>Failure rate</th>
-        <th>Backend latency</th>
-        <th>Policy results</th>
-        <th>Error</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for inst in instances %}
-      <tr>
-        <td>{{ inst.name }}</td>
-        <td class="{{ status_label(inst) }}">{{ status_label(inst) }}</td>
-        <td>{{ inst.last_seen if inst.last_seen is not none else '-' }}</td>
-        <td>{{ inst.summary.get('request_rate') if inst.summary.get('request_rate') is not none else '-' }}</td>
-        <td>{{ inst.summary.get('challenge_rate') if inst.summary.get('challenge_rate') is not none else '-' }}</td>
-        <td>{{ inst.summary.get('success_rate') if inst.summary.get('success_rate') is not none else '-' }}</td>
-        <td>{{ inst.summary.get('failure_rate') if inst.summary.get('failure_rate') is not none else '-' }}</td>
-        <td>{{ inst.summary.get('backend_latency') if inst.summary.get('backend_latency') is not none else '-' }}</td>
-        <td>{{ inst.summary.get('policy_results') if inst.summary.get('policy_results') is not none else '-' }}</td>
-        <td>{{ inst.error if inst.error is not none else '-' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% for inst in instances %}
+    <h2>{{ inst.name }}</h2>
+    <p>
+      Status:
+      <span class="{{ status_label(inst) }}">{{ status_label(inst) }}</span>
+      | URL: {{ inst.url }}
+      | Last seen: {{ inst.last_seen if inst.last_seen is not none else '-' }}
+      | Error: {{ inst.error if inst.error is not none else '-' }}
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Proxied requests total</th>
+          <th>Challenges issued</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ inst.request_total if inst.request_total is not none else '-' }}</td>
+          <td>{{ inst.challenge_issued if inst.challenge_issued is not none else '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="policy">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Rule</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if inst.policy_rows %}
+          {% for row in inst.policy_rows %}
+            <tr>
+              <td>{{ row.action }}</td>
+              <td>{{ row.rule }}</td>
+              <td>{{ row.value }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="3">-</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  {% endfor %}
 </body>
 </html>

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 <name> <port> [--target <url>] [--difficulty <1-10>] [--monitor-url <url>] [--monitor-refresh <seconds>]"
+  echo "Usage: $0 <name> <port> [--target <url>] [--target-host <hostname>] [--difficulty <1-10>] [--base-prefix <path>] [--strip-base-prefix] [--monitor-url <url>] [--monitor-refresh <seconds>]"
   exit 1
 }
 
@@ -50,7 +50,10 @@ PORT="${2:-}"
 shift 2
 
 TARGET="https://mail.bjsystems.co.uk:443"
+TARGET_HOST=""
 DIFFICULTY="3"
+BASE_PREFIX=""
+STRIP_BASE_PREFIX="false"
 MONITOR_URL="http://127.0.0.1:8000"
 MONITOR_REFRESH="10"
 MONITOR_USER="root"
@@ -67,10 +70,24 @@ while [[ $# -gt 0 ]]; do
       TARGET="$2"
       shift 2
       ;;
+    --target-host)
+      [[ $# -lt 2 ]] && usage
+      TARGET_HOST="$2"
+      shift 2
+      ;;
     --difficulty)
       [[ $# -lt 2 ]] && usage
       DIFFICULTY="$2"
       shift 2
+      ;;
+    --base-prefix)
+      [[ $# -lt 2 ]] && usage
+      BASE_PREFIX="$2"
+      shift 2
+      ;;
+    --strip-base-prefix)
+      STRIP_BASE_PREFIX="true"
+      shift 1
       ;;
     --monitor-url)
       [[ $# -lt 2 ]] && usage
@@ -101,6 +118,22 @@ fi
 if ! [[ "$MONITOR_REFRESH" =~ ^[0-9]+$ ]] || (( MONITOR_REFRESH < 1 )); then
   echo "Error: monitor refresh must be >= 1"
   exit 1
+fi
+
+if [[ -n "$TARGET_HOST" ]] && [[ "$TARGET_HOST" == *://* ]]; then
+  echo "Error: --target-host must be a hostname, not a URL"
+  exit 1
+fi
+
+if [[ -n "$BASE_PREFIX" ]]; then
+  if [[ "${BASE_PREFIX:0:1}" != "/" ]]; then
+    echo "Error: --base-prefix must start with /"
+    exit 1
+  fi
+  if [[ "$BASE_PREFIX" != "/" && "$BASE_PREFIX" == */ ]]; then
+    echo "Error: --base-prefix must not end with /"
+    exit 1
+  fi
 fi
 
 BIN="/usr/sbin/anubis"
@@ -135,21 +168,14 @@ chown anubis:anubis "$CONF_DIR"
 
 cat > "$POLICY_FILE" <<'EOF'
 bots:
-  # Block obviously malicious traffic
   - import: (data)/bots/_deny-pathological.yaml
-
-  # Block aggressive AI crawlers
   - import: (data)/meta/ai-block-aggressive.yaml
-
-  # Allow well-behaved search engines
   - import: (data)/crawlers/_allow-good.yaml
 
-  # Explicitly allow normal browsers
   - name: browser
     user_agent_regex: "(?i)(Mozilla|Chrome|Chromium|Firefox|Safari|Edg)"
     action: ALLOW
 
-  # Everything else must solve the JavaScript challenge
   - name: unknown-clients
     user_agent_regex: ".*"
     action: CHALLENGE
@@ -176,7 +202,18 @@ METRICS_BIND=127.0.0.1:$METRICS_PORT
 METRICS_BIND_NETWORK=tcp
 POLICY_FNAME=$POLICY_FILE
 TARGET=$TARGET
-BASE_PREFIX=/${NAME}
+EOF
+
+if [[ -n "$TARGET_HOST" ]]; then
+  echo "TARGET_HOST=$TARGET_HOST" >> "$ENV_FILE"
+fi
+
+if [[ -n "$BASE_PREFIX" ]]; then
+  echo "BASE_PREFIX=$BASE_PREFIX" >> "$ENV_FILE"
+  echo "STRIP_BASE_PREFIX=$STRIP_BASE_PREFIX" >> "$ENV_FILE"
+fi
+
+cat >> "$ENV_FILE" <<EOF
 SERVE_ROBOTS_TXT=0
 EOF
 
@@ -256,3 +293,4 @@ else
 fi
 
 echo "Monitor config updated at ${MONITOR_CONFIG}"
+echo "Environment written to ${ENV_FILE}"

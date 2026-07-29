@@ -19,6 +19,45 @@
     summary { cursor: pointer; }
   </style>
 </head>
+<script>
+(function () {
+  function getOpenKeys() {
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const open = hash.get("open");
+    return new Set(open ? open.split(",").filter(Boolean) : []);
+  }
+
+  function setOpenKeys(keys) {
+    const hash = new URLSearchParams(location.hash.slice(1));
+    if (keys.size) {
+      hash.set("open", [...keys].join(","));
+    } else {
+      hash.delete("open");
+    }
+    location.hash = hash.toString();
+  }
+
+  const detailsList = document.querySelectorAll("details[data-key]");
+  const openKeys = getOpenKeys();
+
+  detailsList.forEach((el) => {
+    const key = el.dataset.key;
+    if (openKeys.has(key)) {
+      el.open = true;
+    }
+
+    el.addEventListener("toggle", () => {
+      const current = getOpenKeys();
+      if (el.open) {
+        current.add(key);
+      } else {
+        current.delete(key);
+      }
+      setOpenKeys(current);
+    });
+  });
+})();
+</script>
 <body>
   <h1>Anubis Monitor</h1>
 
@@ -60,32 +99,32 @@
       </tr>
       <tr>
         <td colspan="9">
-          <details>
-            <summary>Policy details</summary>
-            {% if inst.policy_rows %}
-            <table>
-              <thead>
-                <tr>
-                  <th>Action</th>
-                  <th>Rule</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in inst.policy_rows %}
-                <tr>
-                  <td>{{ row.action }}</td>
-                  <td>{{ row.rule }}</td>
-                  <td>{{ fmt_value(row.value) }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-            {% else %}
-              <div class="muted">No policy samples found.</div>
-            {% endif %}
-          </details>
-        </td>
+			<details data-key="{{ inst.name }}">
+			  <summary>Policy details</summary>
+			  {% if inst.policy_rows %}
+			  <table>
+				<thead>
+				  <tr>
+					<th>Action</th>
+					<th>Rule</th>
+					<th>Value</th>
+				  </tr>
+				</thead>
+				<tbody>
+				  {% for row in inst.policy_rows %}
+				  <tr>
+					<td>{{ row.action }}</td>
+					<td>{{ row.rule }}</td>
+					<td>{{ fmt_value(row.value) }}</td>
+				  </tr>
+				  {% endfor %}
+				</tbody>
+			  </table>
+			  {% else %}
+				<div class="muted">No policy samples found.</div>
+			  {% endif %}
+			</details>
+      </td>
       </tr>
       {% endfor %}
     </tbody>

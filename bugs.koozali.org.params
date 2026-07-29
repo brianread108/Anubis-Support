@@ -1,0 +1,98 @@
+# In the proxy:
+# Plain HTTP redirect to HTTPS
+<VirtualHost *:80>
+       ServerAdmin admin@koozali.org
+       ServerName bugs.koozali.org
+       DocumentRoot /var/www/html
+       ErrorLog /var/log/httpd/bugs.koozali.org_error.log
+       CustomLog /var/log/httpd/bugs.koozali.org_access.log combined
+       RewriteEngine on
+       RewriteRule ^ https://bugs.koozali.org%{REQUEST_URI} [END,NE,R=permanent]
+</VirtualHost>
+
+# HTTPS listener that forwards to Anubis (10.10.1.20)
+<VirtualHost *:443>
+       ServerAdmin admin@koozali.org
+       ServerName bugs.koozali.org
+       DocumentRoot /var/www/html
+       ErrorLog /var/log/httpd/bugs.koozali.org_error.log
+       CustomLog /var/log/httpd/bugs.koozali.org_access.log combined
+
+       SSLEngine on
+       SSLCertificateFile /etc/letsencrypt/live/bugs.koozali.org/fullchain.pem
+       SSLCertificateKeyFile /etc/letsencrypt/live/bugs.koozali.org/privkey.pem
+       Include /etc/letsencrypt/options-ssl-apache.conf
+
+       RequestHeader set "X-Real-Ip" expr=%{REMOTE_ADDR}
+       RequestHeader set "X-Forwarded-Proto" "https"
+
+       ProxyPreserveHost On
+       ProxyRequests Off
+       ProxyVia Off
+
+       ProxyPass / http://10.10.1.20:9001/
+       ProxyPassReverse / http://10.10.1.20:9001/
+</VirtualHost>
+# In the proxy - end
+
+# In the target web server (in this case bugs.koozali.org)
+# Actual website config
+# Tell apache to listen on port 3001 so that it can serve the actual website
+Listen 3001
+<VirtualHost *:3001>
+       ServerAdmin admin@koozali.org
+       ServerName bugs.koozali.org
+       DocumentRoot /var/www/html/bugzilla
+       ErrorLog /var/log/httpd/bugs.koozali.org_error.log
+       CustomLog /var/log/httpd/bugs.koozali.org_access.log combined
+</VirtualHost>
+# In the target web server (in this case bugs.koozali.org) - end
+
+#Parameters to Anubis (created by the script automatically and put in .env file
+#bugs.env:
+BIND=0.0.0.0:9001
+BIND_NETWORK=tcp
+DIFFICULTY=3
+METRICS_BIND=127.0.0.1:19001
+METRICS_BIND_NETWORK=tcp
+POLICY_FNAME=/etc/anubis/bugs.botPolicies.yaml
+TARGET=http://bugs.koozali.org:3001
+TARGET_HOST=bugs.koozali.org
+SERVE_ROBOTS_TXT=0
+
+and bugs.botPolicies.yaml:
+bots:
+  - import: (data)/bots/_deny-pathological.yaml
+  - import: (data)/meta/ai-block-aggressive.yaml
+  - import: (data)/crawlers/_allow-good.yaml
+
+  - name: browser
+    user_agent_regex: "(?i)(Mozilla|Chrome|Chromium|Firefox|Safari|Edg)"
+    action: ALLOW
+
+  - name: unknown-clients
+    user_agent_regex: ".*"
+    action: CHALLENGE
+
+store:
+  backend: bbolt
+  parameters:
+    path: /var/lib/anubis/anubis.bdb
+
+status_codes:
+  CHALLENGE: 200
+  DENY: 403
+
+logging:
+  sink: stdio
+  level: INFO
+
+#Call to make-anubis.sh (generates all the parameters for Anubis, and creates a systemd task and sets it running)
+make-anubis.sh bugs 9001 --target http://bugs.koozali.org:3001 --target-host bugs.koozali.org 
+
+#NB: Anubis monitor is on port 8000 (also created by make-anubis.sh if not there.
+
+#NB also need /etc/hosts in anubis server VM 
+# (otherwise we get into a loop coming back in through front and proxy)
+10.10.2.16 bugs.koozali.org
+#Also means the an ubis server must have access to .2 (101) and .1 (100) VLAN.

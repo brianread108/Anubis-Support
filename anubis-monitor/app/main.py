@@ -96,7 +96,7 @@ async def refresh_state():
     tasks = [poll_instance(instance, config.timeout) for instance in config.instances]
     results = await asyncio.gather(*tasks) if tasks else []
     STATE.instances = results
-    STATE.last_updated = datetime.utcnow()
+    STATE.last_updated = datetime.now().astimezone()
     STATE.config_error = None
 
 

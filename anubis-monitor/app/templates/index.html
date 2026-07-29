@@ -55,7 +55,7 @@
         <td>{{ fmt_value(inst.policy_counts.get('ALLOW')) }}</td>
         <td>{{ fmt_value(inst.policy_counts.get('CHALLENGE')) }}</td>
         <td>{{ fmt_value(inst.policy_counts.get('DENY')) }}</td>
-        <td>{{ inst.last_seen if inst.last_seen is not none else '-' }}</td>
+        <td>{{ inst.last_seen.strftime("%Y-%m-%d %H:%M:%S") if inst.last_seen is not none else '-' }}</td>
         <td>{{ inst.error if inst.error is not none else '-' }}</td>
       </tr>
       <tr>

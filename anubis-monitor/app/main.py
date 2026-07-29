@@ -74,7 +74,7 @@ async def poll_instance(instance, timeout):
             name=instance.name,
             url=instance.url,
             healthy=True,
-            last_seen=datetime.utcnow(),
+            last_seen=datetime.now().astimezone(),
             error=None,
             raw_samples=samples,
             summary=summary,

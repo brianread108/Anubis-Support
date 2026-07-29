@@ -74,7 +74,7 @@ async def poll_instance(instance, timeout):
             name=instance.name,
             url=instance.url,
             healthy=True,
-            last_seen=datetime.now().astimezone(),
+            last_seen=datetime.now().astimezone().replace(tzinfo=None),
             error=None,
             raw_samples=samples,
             summary=summary,
@@ -96,7 +96,7 @@ async def refresh_state():
     tasks = [poll_instance(instance, config.timeout) for instance in config.instances]
     results = await asyncio.gather(*tasks) if tasks else []
     STATE.instances = results
-    STATE.last_updated = datetime.now().astimezone()
+    STATE.last_updated = datetime.now().astimezone().replace(tzinfo=None)
     STATE.config_error = None
 
 

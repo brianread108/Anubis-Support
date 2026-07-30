@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -12,6 +12,7 @@ class InstanceStatus:
     error: Optional[str] = None
     raw_samples: List[Dict[str, object]] = field(default_factory=list)
     summary: Dict[str, object] = field(default_factory=dict)
+    derived: Dict[str, object] = field(default_factory=dict)
 
 
 @dataclass

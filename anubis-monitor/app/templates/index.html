@@ -1,94 +1,211 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="refresh" content="{{ refresh }}">
   <title>Anubis Monitor</title>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
-    th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; text-align: left; vertical-align: middle; }
-    .healthy { color: green; }
-    .degraded { color: orange; }
-    .down { color: red; }
-    .muted { color: #666; }
-    .error { color: #b00020; }
-    .mini { font-size: 0.92em; white-space: nowrap; }
+    body { font-family: sans-serif; margin: 2rem; color: #1f2937; }
+    h1, h2, h3 { margin-bottom: 0.4rem; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td {
+      padding: 0.55rem;
+      border-bottom: 1px solid #d1d5db;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th { background: #f3f4f6; }
+    .healthy { color: #15803d; font-weight: bold; }
+    .degraded { color: #b45309; font-weight: bold; }
+    .down { color: #b91c1c; font-weight: bold; }
+    .muted { color: #6b7280; }
+    .error { color: #b91c1c; }
+    .mini { font-size: 0.9em; }
     .nowrap { white-space: nowrap; }
-    details { margin-top: 0.25rem; }
-    summary { cursor: pointer; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+    .card {
+      border: 1px solid #d1d5db;
+      border-radius: 0.4rem;
+      padding: 0.8rem;
+      background: #fafafa;
+    }
+    .card .value { font-size: 1.5rem; font-weight: bold; }
+    .card .rate { color: #4b5563; font-size: 0.9rem; }
+    details { margin-top: 0.75rem; }
+    summary { cursor: pointer; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>Anubis Monitor</h1>
 
   {% if config_error %}
-    <p class="error">Config/runtime error: {{ config_error }}</p>
+    <p class="error">Monitor error: {{ config_error }}</p>
   {% endif %}
 
-  <p class="muted">Last updated: {{ last_updated if last_updated is not none else '-' }}</p>
+  <p class="muted">
+    Last updated:
+    {{ last_updated.strftime("%Y-%m-%d %H:%M:%S %Z") if last_updated else "-" }};
+    refresh interval: {{ refresh }} seconds.
+    “New” and “per minute” values are calculated from the previous poll.
+  </p>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Status</th>
-        <th>Name</th>
-        <th>Requests</th>
-        <th>Challenges</th>
-        <th>ALLOW</th>
-        <th>CHALLENGE</th>
-        <th>DENY</th>
-        <th>Last seen</th>
-        <th>Error</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for inst in instances %}
-      <tr>
-        <td class="nowrap">{{ status_icon(inst) }} <span class="{{ status_label(inst) }}">{{ status_label(inst) }}</span></td>
-        <td>
-          {{ inst.name }}
-          <div class="mini muted">{{ inst.url }}</div>
-        </td>
-        <td>{{ fmt_value(inst.request_total) }}</td>
-        <td>{{ fmt_value(inst.challenge_issued) }}</td>
-        <td>{{ fmt_value(inst.policy_counts.get('ALLOW')) }}</td>
-        <td>{{ fmt_value(inst.policy_counts.get('CHALLENGE')) }}</td>
-        <td>{{ fmt_value(inst.policy_counts.get('DENY')) }}</td>
-        <td>{{ inst.last_seen.strftime("%Y-%m-%d %H:%M:%S") if inst.last_seen is not none else '-' }}</td>
-        <td>{{ inst.error if inst.error is not none else '-' }}</td>
-      </tr>
-      <tr>
-        <td colspan="9">
-          <details>
-            <summary>Policy details</summary>
-            {% if inst.policy_rows %}
-            <table>
-              <thead>
-                <tr>
-                  <th>Action</th>
-                  <th>Rule</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in inst.policy_rows %}
-                <tr>
-                  <td>{{ row.action }}</td>
-                  <td>{{ row.rule }}</td>
-                  <td>{{ fmt_value(row.value) }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-            {% else %}
-              <div class="muted">No policy samples found.</div>
-            {% endif %}
-          </details>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% for inst in instances %}
+    <h2>
+      {{ status_icon(inst) }}
+      <span class="{{ status_label(inst) }}">{{ inst.name }}</span>
+    </h2>
+
+    <p class="muted">
+      {{ inst.url }}
+      {% if inst.last_seen %}
+        — last successful scrape: {{ inst.last_seen.strftime("%Y-%m-%d %H:%M:%S %Z") }}
+      {% endif %}
+    </p>
+
+    {% if inst.error %}
+      <p class="error">{{ inst.error }}</p>
+    {% endif %}
+
+    {% if inst.healthy %}
+      <div class="cards">
+        <div class="card">
+          <div class="muted">Policy decisions</div>
+          <div class="value">{{ fmt_value(inst.derived.total_decisions) }}</div>
+          <div class="rate">
+            +{{ fmt_value(inst.derived.delta_decisions) }} since poll;
+            {{ fmt_value(inst.derived.per_minute.decisions) }}/min
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Challenges issued</div>
+          <div class="value">{{ fmt_value(inst.summary.challenge_issued) }}</div>
+          <div class="rate">
+            +{{ fmt_value(inst.derived.challenges_delta) }} since poll;
+            {{ fmt_value(inst.derived.per_minute.challenges) }}/min
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Proxied upstream</div>
+          <div class="value">{{ fmt_value(inst.summary.proxied_total) }}</div>
+          <div class="rate">
+            +{{ fmt_value(inst.derived.proxied_delta) }} since poll;
+            {{ fmt_value(inst.derived.per_minute.proxied) }}/min
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Denied</div>
+          <div class="value">{{ fmt_value(inst.derived.totals.DENY) }}</div>
+          <div class="rate">
+            +{{ fmt_value(inst.derived.deltas.DENY) }} since poll;
+            {{ fmt_value(inst.derived.per_minute.deny) }}/min
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Challenge share</div>
+          <div class="value">{{ fmt_value(inst.derived.percentages.CHALLENGE) }}%</div>
+          <div class="rate">Of all policy decisions</div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Allow share</div>
+          <div class="value">{{ fmt_value(inst.derived.percentages.ALLOW) }}%</div>
+          <div class="rate">Of all policy decisions</div>
+        </div>
+      </div>
+
+      <details>
+        <summary>Policy rules</summary>
+        <table>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Rule</th>
+              <th>Lifetime</th>
+              <th>New since poll</th>
+              <th>Rate/min</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in inst.derived.rules %}
+              <tr>
+                <td>{{ row.action }}</td>
+                <td>{{ row.rule }}</td>
+                <td>{{ fmt_value(row.total) }}</td>
+                <td>{{ fmt_value(row.delta) }}</td>
+                <td>{{ fmt_value(row.per_minute) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </details>
+
+      <details>
+        <summary>Upstream targets</summary>
+        <table>
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Lifetime proxied requests</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for host, total in inst.summary.proxied_by_host|dictsort %}
+              <tr>
+                <td>{{ host }}</td>
+                <td>{{ fmt_value(total) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </details>
+
+      <details>
+        <summary>Service health</summary>
+        <table>
+          <tbody>
+            <tr>
+              <th>Uptime</th>
+              <td>{{ fmt_duration(inst.derived.uptime) }}</td>
+            </tr>
+            <tr>
+              <th>Resident memory</th>
+              <td>{{ fmt_bytes(inst.derived.runtime.process_resident_memory_bytes) }}</td>
+            </tr>
+            <tr>
+              <th>Goroutines / OS threads</th>
+              <td>
+                {{ fmt_value(inst.derived.runtime.go_goroutines) }}
+                / {{ fmt_value(inst.derived.runtime.go_threads) }}
+              </td>
+            </tr>
+            <tr>
+              <th>Open file descriptors</th>
+              <td>
+                {{ fmt_value(inst.derived.runtime.process_open_fds) }}
+                / {{ fmt_value(inst.derived.runtime.process_max_fds) }}
+              </td>
+            </tr>
+            <tr>
+              <th>Received since last poll</th>
+              <td>{{ fmt_bytes(inst.derived.per_minute.received_bytes) }}/min</td>
+            </tr>
+            <tr>
+              <th>Transmitted since last poll</th>
+              <td>{{ fmt_bytes(inst.derived.per_minute.transmitted_bytes) }}/min</td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
+    {% endif %}
+  {% endfor %}
 </body>
 </html>

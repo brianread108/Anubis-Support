@@ -47,11 +47,11 @@ def _split_sample(sample_name: str) -> Tuple[str, Dict[str, str]]:
         for part in parts:
             if "=" not in part:
                 continue
-            k, v = part.split("=", 1)
-            k = k.strip()
-            v = v.strip().strip('"')
-            v = v.replace('\\"', '"').replace('\\\\', '\\')
-            labels[k] = v
+            key, value = part.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"')
+            value = value.replace('\\"', '"').replace("\\\\", "\\")
+            labels[key] = value
 
     return name, labels
 
@@ -70,23 +70,37 @@ def parse_prometheus_text(text: str) -> List[Dict[str, object]]:
 
         name, labels = _split_sample(parts[0])
         value = _safe_float(parts[1])
-        if value is None:
-            continue
 
-        samples.append({
-            "name": name,
-            "labels": labels,
-            "value": value,
-        })
+        if value is not None:
+            samples.append({
+                "name": name,
+                "labels": labels,
+                "value": value,
+            })
 
     return samples
 
 
 def extract_anubis_summary(samples: List[Dict[str, object]]) -> Dict[str, object]:
     summary = {
-        "request_total": None,
-        "challenge_issued": None,
+        "proxied_total": 0.0,
+        "proxied_by_host": {},
+        "challenge_issued": 0.0,
+        "challenges_by_method": {},
         "policy_results": {},
+        "runtime": {},
+    }
+
+    runtime_metrics = {
+        "process_start_time_seconds",
+        "process_cpu_seconds_total",
+        "process_resident_memory_bytes",
+        "process_open_fds",
+        "process_max_fds",
+        "process_network_receive_bytes_total",
+        "process_network_transmit_bytes_total",
+        "go_goroutines",
+        "go_threads",
     }
 
     for sample in samples:
@@ -94,15 +108,25 @@ def extract_anubis_summary(samples: List[Dict[str, object]]) -> Dict[str, object
         labels = sample.get("labels", {})
         value = sample.get("value")
 
+        if not isinstance(value, (int, float)):
+            continue
+
         if name == "anubis_proxied_requests_total":
-            summary["request_total"] = value
+            host = labels.get("host", "unknown")
+            summary["proxied_by_host"][host] = value
+            summary["proxied_total"] += value
 
         elif name == "anubis_challenges_issued":
-            summary["challenge_issued"] = value
+            method = labels.get("method", "unknown")
+            summary["challenges_by_method"][method] = value
+            summary["challenge_issued"] += value
 
         elif name == "anubis_policy_results":
             action = labels.get("action", "UNKNOWN")
             rule = labels.get("rule", "")
             summary["policy_results"][(action, rule)] = value
+
+        elif name in runtime_metrics:
+            summary["runtime"][name] = value
 
     return summary

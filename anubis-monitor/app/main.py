@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -148,7 +148,7 @@ def derive_summary(summary, previous_summary, elapsed_seconds):
     rule_rows.sort(key=lambda row: row["delta"], reverse=True)
 
     start_time = runtime.get("process_start_time_seconds")
-    uptime = datetime.now(timezone.utc).timestamp() - start_time if start_time else None
+    uptime = datetime.now().timestamp() - start_time if start_time else None
 
     return {
         "totals": current_totals,
@@ -181,7 +181,7 @@ async def poll_instance(instance, timeout, previous_status=None):
         samples = parse_prometheus_text(text)
         summary = extract_anubis_summary(samples)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now().astimezone()
         previous_summary = previous_status.summary if previous_status and previous_status.healthy else {}
         previous_time = previous_status.last_seen if previous_status else None
 
@@ -222,7 +222,7 @@ async def refresh_state():
     ]
 
     STATE.instances = await asyncio.gather(*tasks) if tasks else []
-    STATE.last_updated = datetime.now(timezone.utc)
+    STATE.last_updated = datetime.now().astimezone()
     STATE.config_error = None
 
 

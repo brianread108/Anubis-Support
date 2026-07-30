@@ -166,7 +166,7 @@ mkdir -p "$CONF_DIR"
 chmod 0750 "$CONF_DIR"
 chown anubis:anubis "$CONF_DIR"
 
-cat > "$POLICY_FILE" <<'EOF'
+cat > "$POLICY_FILE" <<EOF
 bots:
   - import: (data)/bots/_deny-pathological.yaml
   - import: (data)/meta/ai-block-aggressive.yaml
@@ -183,7 +183,7 @@ bots:
 store:
   backend: bbolt
   parameters:
-    path: /var/lib/anubi/${NAME}.bdb
+    path: /var/lib/anubis/${NAME}.bdb
 
 status_codes:
   CHALLENGE: 200

@@ -13,6 +13,8 @@ from app.parser import extract_anubis_summary, parse_prometheus_text
 from app.scraper import scrape_metrics
 from app.state import InstanceStatus, STATE
 
+from app.history import history_rows, initialise, period_delta, prune_history, save_sample
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config.yaml"
 TEMPLATES_DIR = BASE_DIR / "app" / "templates"
@@ -222,6 +224,9 @@ async def refresh_state():
     ]
 
     STATE.instances = await asyncio.gather(*tasks) if tasks else []
+    for instance in STATE.instances:
+        save_sample(config.history_db, instance)
+    prune_history(config.history_db, config.history_days)
     STATE.last_updated = datetime.now().astimezone()
     STATE.config_error = None
 
@@ -239,8 +244,10 @@ async def refresh_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.refresh_task = asyncio.create_task(refresh_loop())
+    config = load_config(CONFIG_PATH)
+    initialise(config.history_db)
 
+    app.state.refresh_task = asyncio.create_task(refresh_loop())
     try:
         yield
     finally:
@@ -262,12 +269,33 @@ async def index(request: Request):
     if not STATE.instances and config.instances:
         await refresh_state()
 
+    history = {}
+
+    for instance in STATE.instances:
+        rows = history_rows(
+            config.history_db,
+            instance.name,
+            config.chart_hours,
+        )
+
+        history[instance.name] = {
+            "rows": rows,
+            "decisions": period_delta(rows, "decisions"),
+            "allow": period_delta(rows, "allow"),
+            "challenge": period_delta(rows, "challenge"),
+            "deny": period_delta(rows, "deny"),
+            "issued": period_delta(rows, "challenges_issued"),
+            "proxied": period_delta(rows, "proxied"),
+        }
+
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "instances": STATE.instances,
+            "history": history,
             "refresh": config.refresh,
+            "chart_hours": config.chart_hours,
             "last_updated": STATE.last_updated,
             "config_error": STATE.config_error,
             "status_label": status_label,

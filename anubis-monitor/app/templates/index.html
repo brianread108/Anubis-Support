@@ -39,6 +39,16 @@
     .card .rate { color: #4b5563; font-size: 0.9rem; }
     details { margin-top: 0.75rem; }
     summary { cursor: pointer; font-weight: bold; }
+    
+    .chart-box {
+	  max-width: 1200px;
+	  height: 320px;
+	  margin: 1rem 0 1.5rem;
+	  padding: 0.75rem;
+	  border: 1px solid #d1d5db;
+	  border-radius: 0.4rem;
+	  background: #fff;
+	}
   </style>
 </head>
 <body>
@@ -122,6 +132,32 @@
           <div class="rate">Of all policy decisions</div>
         </div>
       </div>
+      
+      {% set hist = history.get(inst.name, {}) %}
+
+	<h3>Last {{ chart_hours }} hours</h3>
+
+	<div class="cards">
+	  <div class="card">
+		<div class="muted">Policy decisions</div>
+		<div class="value">{{ fmt_value(hist.decisions) }}</div>
+	  </div>
+
+	  <div class="card">
+		<div class="muted">Challenges issued</div>
+		<div class="value">{{ fmt_value(hist.issued) }}</div>
+	  </div>
+
+	  <div class="card">
+		<div class="muted">Proxied upstream</div>
+		<div class="value">{{ fmt_value(hist.proxied) }}</div>
+	  </div>
+
+	  <div class="card">
+		<div class="muted">Denied</div>
+		<div class="value">{{ fmt_value(hist.deny) }}</div>
+	  </div>
+	</div>
 
       <details>
         <summary>Policy rules</summary>
@@ -208,5 +244,101 @@
       </details>
     {% endif %}
   {% endfor %}
+  
+  <script src="/static/chart.umd.min.js"></script>
+
+	<script>
+	  function counterChanges(rows, key) {
+		let previous = null;
+
+		return rows.map(row => {
+		  const current = Number(row[key] || 0);
+
+		  if (previous === null) {
+			previous = current;
+			return 0;
+		  }
+
+		  let delta = current - previous;
+
+		  if (delta < 0) {
+			delta = current;
+		  }
+
+		  previous = current;
+		  return delta;
+		});
+	  }
+
+	  document.querySelectorAll('script[id^="history-"]').forEach(source => {
+		const rows = JSON.parse(source.textContent);
+		const suffix = source.id.replace("history-", "");
+		const canvas = document.getElementById(`traffic-${suffix}`);
+
+		if (!canvas || !rows.length) {
+		  return;
+		}
+
+		new Chart(canvas, {
+		  type: "line",
+		  data: {
+			labels: rows.map(row => row.time),
+			datasets: [
+			  {
+				label: "Challenges",
+				data: counterChanges(rows, "challenge"),
+				borderColor: "#d97706",
+				backgroundColor: "rgba(217, 119, 6, 0.12)",
+				fill: true,
+				tension: 0.2
+			  },
+			  {
+				label: "Denied",
+				data: counterChanges(rows, "deny"),
+				borderColor: "#b91c1c",
+				backgroundColor: "rgba(185, 28, 28, 0.10)",
+				fill: true,
+				tension: 0.2
+			  },
+			  {
+				label: "Proxied upstream",
+				data: counterChanges(rows, "proxied"),
+				borderColor: "#15803d",
+				backgroundColor: "rgba(21, 128, 61, 0.10)",
+				fill: true,
+				tension: 0.2
+			  }
+			]
+		  },
+		  options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			interaction: {
+			  mode: "index",
+			  intersect: false
+			},
+			plugins: {
+			  legend: {
+				position: "top"
+			  }
+			},
+			scales: {
+			  x: {
+				ticks: {
+				  maxTicksLimit: 8
+				}
+			  },
+			  y: {
+				beginAtZero: true,
+				title: {
+				  display: true,
+				  text: "Events per monitor interval"
+				}
+			  }
+			}
+		  }
+		});
+	  });
+	</script>
 </body>
 </html>

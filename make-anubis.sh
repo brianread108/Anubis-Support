@@ -183,7 +183,7 @@ bots:
 store:
   backend: bbolt
   parameters:
-    path: /var/lib/anubis/$NAME.bdb
+    path: /var/lib/anubi/${NAME}.bdb
 
 status_codes:
   CHALLENGE: 200

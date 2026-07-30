@@ -3,342 +3,571 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="refresh" content="{{ refresh }}">
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <title>Anubis Monitor</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+
   <style>
-    body { font-family: sans-serif; margin: 2rem; color: #1f2937; }
-    h1, h2, h3 { margin-bottom: 0.4rem; }
-    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-    th, td {
-      padding: 0.55rem;
-      border-bottom: 1px solid #d1d5db;
+    :root {
+      --border: #d1d5db;
+      --page: #f8fafc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --green: #15803d;
+      --amber: #b45309;
+      --red: #b91c1c;
+      --blue: #2563eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 2rem;
+      background: var(--page);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 0.5rem;
+    }
+
+    h2 {
+      margin: 2rem 0 0.35rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      margin: 1.5rem 0 0.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0 1rem;
+      background: var(--card);
+    }
+
+    th,
+    td {
+      padding: 0.6rem;
+      border-bottom: 1px solid var(--border);
       text-align: left;
       vertical-align: middle;
     }
-    th { background: #f3f4f6; }
-    .healthy { color: #15803d; font-weight: bold; }
-    .degraded { color: #b45309; font-weight: bold; }
-    .down { color: #b91c1c; font-weight: bold; }
-    .muted { color: #6b7280; }
-    .error { color: #b91c1c; }
-    .mini { font-size: 0.9em; }
-    .nowrap { white-space: nowrap; }
+
+    th {
+      background: #e5e7eb;
+      font-weight: bold;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .healthy {
+      color: var(--green);
+      font-weight: bold;
+    }
+
+    .degraded {
+      color: var(--amber);
+      font-weight: bold;
+    }
+
+    .down,
+    .error {
+      color: var(--red);
+      font-weight: bold;
+    }
+
+    .mini {
+      margin-top: 0.2rem;
+      font-size: 0.88rem;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-      gap: 0.75rem;
-      margin: 1rem 0;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 0.8rem;
+      margin: 0.75rem 0 1rem;
     }
+
     .card {
-      border: 1px solid #d1d5db;
-      border-radius: 0.4rem;
-      padding: 0.8rem;
-      background: #fafafa;
+      min-height: 115px;
+      padding: 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      background: var(--card);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
-    .card .value { font-size: 1.5rem; font-weight: bold; }
-    .card .rate { color: #4b5563; font-size: 0.9rem; }
-    details { margin-top: 0.75rem; }
-    summary { cursor: pointer; font-weight: bold; }
-    
+
+    .value {
+      margin-top: 0.35rem;
+      font-size: 1.55rem;
+      font-weight: bold;
+    }
+
+    .rate {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
     .chart-box {
-	  max-width: 1200px;
-	  height: 320px;
-	  margin: 1rem 0 1.5rem;
-	  padding: 0.75rem;
-	  border: 1px solid #d1d5db;
-	  border-radius: 0.4rem;
-	  background: #fff;
-	}
+      height: 340px;
+      margin: 0.75rem 0 1.5rem;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      background: var(--card);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    details {
+      margin: 0.8rem 0;
+      padding: 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      background: var(--card);
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .no-data {
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      background: var(--card);
+      color: var(--muted);
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 1rem;
+      }
+
+      table {
+        font-size: 0.88rem;
+      }
+
+      th,
+      td {
+        padding: 0.4rem;
+      }
+
+      .chart-box {
+        height: 280px;
+      }
+    }
   </style>
 </head>
+
 <body>
-  <h1>Anubis Monitor</h1>
+  <main>
+    <h1>Anubis Monitor</h1>
 
-  {% if config_error %}
-    <p class="error">Monitor error: {{ config_error }}</p>
-  {% endif %}
-
-  <p class="muted">
-    Last updated:
-    {{ last_updated.strftime("%Y-%m-%d %H:%M:%S %Z") if last_updated else "-" }};
-    refresh interval: {{ refresh }} seconds.
-    “New” and “per minute” values are calculated from the previous poll.
-  </p>
-
-  {% for inst in instances %}
-    <h2>
-      {{ status_icon(inst) }}
-      <span class="{{ status_label(inst) }}">{{ inst.name }}</span>
-    </h2>
+    {% if config_error %}
+      <p class="error">Monitor error: {{ config_error }}</p>
+    {% endif %}
 
     <p class="muted">
-      {{ inst.url }}
-      {% if inst.last_seen %}
-        — last successful scrape: {{ inst.last_seen.strftime("%Y-%m-%d %H:%M:%S %Z") }}
-      {% endif %}
+      Last updated:
+      {{ last_updated.strftime("%Y-%m-%d %H:%M:%S %Z") if last_updated else "-" }}.
+      Page refresh: every {{ refresh }} seconds.
+      “New” and “per minute” values are calculated from the preceding successful scrape.
     </p>
 
-    {% if inst.error %}
-      <p class="error">{{ inst.error }}</p>
+    {% if not instances %}
+      <p class="no-data">No Anubis instances are configured.</p>
     {% endif %}
 
-    {% if inst.healthy %}
-      <div class="cards">
-        <div class="card">
-          <div class="muted">Policy decisions</div>
-          <div class="value">{{ fmt_value(inst.derived.total_decisions) }}</div>
-          <div class="rate">
-            +{{ fmt_value(inst.derived.delta_decisions) }} since poll;
-            {{ fmt_value(inst.derived.per_minute.decisions) }}/min
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="muted">Challenges issued</div>
-          <div class="value">{{ fmt_value(inst.summary.challenge_issued) }}</div>
-          <div class="rate">
-            +{{ fmt_value(inst.derived.challenges_delta) }} since poll;
-            {{ fmt_value(inst.derived.per_minute.challenges) }}/min
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="muted">Proxied upstream</div>
-          <div class="value">{{ fmt_value(inst.summary.proxied_total) }}</div>
-          <div class="rate">
-            +{{ fmt_value(inst.derived.proxied_delta) }} since poll;
-            {{ fmt_value(inst.derived.per_minute.proxied) }}/min
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="muted">Denied</div>
-          <div class="value">{{ fmt_value(inst.derived.totals.DENY) }}</div>
-          <div class="rate">
-            +{{ fmt_value(inst.derived.deltas.DENY) }} since poll;
-            {{ fmt_value(inst.derived.per_minute.deny) }}/min
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="muted">Challenge share</div>
-          <div class="value">{{ fmt_value(inst.derived.percentages.CHALLENGE) }}%</div>
-          <div class="rate">Of all policy decisions</div>
-        </div>
-
-        <div class="card">
-          <div class="muted">Allow share</div>
-          <div class="value">{{ fmt_value(inst.derived.percentages.ALLOW) }}%</div>
-          <div class="rate">Of all policy decisions</div>
-        </div>
-      </div>
-      
+    {% for inst in instances %}
       {% set hist = history.get(inst.name, {}) %}
+      {% set history_rows = hist.get("rows", []) %}
 
-	<h3>Last {{ chart_hours }} hours</h3>
+      <section>
+        <h2>
+          {{ status_icon(inst) }}
+          <span class="{{ status_label(inst) }}">{{ inst.name }}</span>
+        </h2>
 
-	<div class="cards">
-	  <div class="card">
-		<div class="muted">Policy decisions</div>
-		<div class="value">{{ fmt_value(hist.decisions) }}</div>
-	  </div>
+        <p class="muted">
+          {{ inst.url }}
+          {% if inst.last_seen %}
+            — last successful scrape:
+            {{ inst.last_seen.strftime("%Y-%m-%d %H:%M:%S %Z") }}
+          {% endif %}
+        </p>
 
-	  <div class="card">
-		<div class="muted">Challenges issued</div>
-		<div class="value">{{ fmt_value(hist.issued) }}</div>
-	  </div>
+        {% if inst.error %}
+          <p class="error">{{ inst.error }}</p>
+        {% endif %}
 
-	  <div class="card">
-		<div class="muted">Proxied upstream</div>
-		<div class="value">{{ fmt_value(hist.proxied) }}</div>
-	  </div>
+        {% if inst.healthy %}
+          <h3>Current counters and rate</h3>
 
-	  <div class="card">
-		<div class="muted">Denied</div>
-		<div class="value">{{ fmt_value(hist.deny) }}</div>
-	  </div>
-	</div>
+          <div class="cards">
+            <div class="card">
+              <div class="muted">Policy decisions</div>
+              <div class="value">{{ fmt_value(inst.derived.total_decisions) }}</div>
+              <div class="rate">
+                +{{ fmt_value(inst.derived.delta_decisions) }} since last poll<br>
+                {{ fmt_value(inst.derived.per_minute.decisions) }} per minute
+              </div>
+            </div>
 
-      <details>
-        <summary>Policy rules</summary>
-        <table>
-          <thead>
-            <tr>
-              <th>Action</th>
-              <th>Rule</th>
-              <th>Lifetime</th>
-              <th>New since poll</th>
-              <th>Rate/min</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in inst.derived.rules %}
-              <tr>
-                <td>{{ row.action }}</td>
-                <td>{{ row.rule }}</td>
-                <td>{{ fmt_value(row.total) }}</td>
-                <td>{{ fmt_value(row.delta) }}</td>
-                <td>{{ fmt_value(row.per_minute) }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </details>
+            <div class="card">
+              <div class="muted">Challenges issued</div>
+              <div class="value">{{ fmt_value(inst.summary.challenge_issued) }}</div>
+              <div class="rate">
+                +{{ fmt_value(inst.derived.challenges_delta) }} since last poll<br>
+                {{ fmt_value(inst.derived.per_minute.challenges) }} per minute
+              </div>
+            </div>
 
-      <details>
-        <summary>Upstream targets</summary>
-        <table>
-          <thead>
-            <tr>
-              <th>Host</th>
-              <th>Lifetime proxied requests</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for host, total in inst.summary.proxied_by_host|dictsort %}
-              <tr>
-                <td>{{ host }}</td>
-                <td>{{ fmt_value(total) }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </details>
+            <div class="card">
+              <div class="muted">Proxied upstream</div>
+              <div class="value">{{ fmt_value(inst.summary.proxied_total) }}</div>
+              <div class="rate">
+                +{{ fmt_value(inst.derived.proxied_delta) }} since last poll<br>
+                {{ fmt_value(inst.derived.per_minute.proxied) }} per minute
+              </div>
+            </div>
 
-      <details>
-        <summary>Service health</summary>
-        <table>
-          <tbody>
-            <tr>
-              <th>Uptime</th>
-              <td>{{ fmt_duration(inst.derived.uptime) }}</td>
-            </tr>
-            <tr>
-              <th>Resident memory</th>
-              <td>{{ fmt_bytes(inst.derived.runtime.process_resident_memory_bytes) }}</td>
-            </tr>
-            <tr>
-              <th>Goroutines / OS threads</th>
-              <td>
-                {{ fmt_value(inst.derived.runtime.go_goroutines) }}
-                / {{ fmt_value(inst.derived.runtime.go_threads) }}
-              </td>
-            </tr>
-            <tr>
-              <th>Open file descriptors</th>
-              <td>
-                {{ fmt_value(inst.derived.runtime.process_open_fds) }}
-                / {{ fmt_value(inst.derived.runtime.process_max_fds) }}
-              </td>
-            </tr>
-            <tr>
-              <th>Received since last poll</th>
-              <td>{{ fmt_bytes(inst.derived.per_minute.received_bytes) }}/min</td>
-            </tr>
-            <tr>
-              <th>Transmitted since last poll</th>
-              <td>{{ fmt_bytes(inst.derived.per_minute.transmitted_bytes) }}/min</td>
-            </tr>
-          </tbody>
-        </table>
-      </details>
-    {% endif %}
-  {% endfor %}
-  
+            <div class="card">
+              <div class="muted">Denied</div>
+              <div class="value">{{ fmt_value(inst.derived.totals.DENY) }}</div>
+              <div class="rate">
+                +{{ fmt_value(inst.derived.deltas.DENY) }} since last poll<br>
+                {{ fmt_value(inst.derived.per_minute.deny) }} per minute
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="muted">Challenge share</div>
+              <div class="value">
+                {{ fmt_value(inst.derived.percentages.CHALLENGE) }}%
+              </div>
+              <div class="rate">Percentage of all policy decisions</div>
+            </div>
+
+            <div class="card">
+              <div class="muted">Allow share</div>
+              <div class="value">
+                {{ fmt_value(inst.derived.percentages.ALLOW) }}%
+              </div>
+              <div class="rate">Percentage of all policy decisions</div>
+            </div>
+          </div>
+
+          <h3>Last {{ chart_hours }} hours</h3>
+
+          <div class="cards">
+            <div class="card">
+              <div class="muted">Policy decisions</div>
+              <div class="value">{{ fmt_value(hist.get("decisions", 0)) }}</div>
+              <div class="rate">Counter increase during retained period</div>
+            </div>
+
+            <div class="card">
+              <div class="muted">Challenges issued</div>
+              <div class="value">{{ fmt_value(hist.get("issued", 0)) }}</div>
+              <div class="rate">Counter increase during retained period</div>
+            </div>
+
+            <div class="card">
+              <div class="muted">Proxied upstream</div>
+              <div class="value">{{ fmt_value(hist.get("proxied", 0)) }}</div>
+              <div class="rate">Counter increase during retained period</div>
+            </div>
+
+            <div class="card">
+              <div class="muted">Denied</div>
+              <div class="value">{{ fmt_value(hist.get("deny", 0)) }}</div>
+              <div class="rate">Counter increase during retained period</div>
+            </div>
+          </div>
+
+          <h3>Traffic trend: last {{ chart_hours }} hours</h3>
+
+          {% if history_rows|length >= 2 %}
+            <div class="chart-box">
+              <canvas id="traffic-{{ loop.index }}"></canvas>
+            </div>
+
+            <script type="application/json" id="history-{{ loop.index }}">
+              {{ history_rows | tojson }}
+            </script>
+          {% else %}
+            <p class="no-data">
+              The graph will appear after at least two successful history samples.
+              With a {{ refresh }}-second refresh interval, this normally takes about
+              {{ refresh * 2 }} seconds after the monitor starts.
+            </p>
+          {% endif %}
+
+          <details>
+            <summary>Policy rules</summary>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Rule</th>
+                  <th>Lifetime</th>
+                  <th>New since poll</th>
+                  <th>Rate/min</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for row in inst.derived.rules %}
+                  <tr>
+                    <td>{{ row.action }}</td>
+                    <td>{{ row.rule }}</td>
+                    <td>{{ fmt_value(row.total) }}</td>
+                    <td>{{ fmt_value(row.delta) }}</td>
+                    <td>{{ fmt_value(row.per_minute) }}</td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="5" class="muted">No policy-rule samples found.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </details>
+
+          <details>
+            <summary>Upstream targets</summary>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Host</th>
+                  <th>Lifetime proxied requests</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for host, total in inst.summary.proxied_by_host|dictsort %}
+                  <tr>
+                    <td>{{ host }}</td>
+                    <td>{{ fmt_value(total) }}</td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="2" class="muted">No upstream proxy samples found.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </details>
+
+          <details>
+            <summary>Service health</summary>
+
+            <table>
+              <tbody>
+                <tr>
+                  <th>Uptime</th>
+                  <td>{{ fmt_duration(inst.derived.uptime) }}</td>
+                </tr>
+
+                <tr>
+                  <th>Resident memory</th>
+                  <td>{{ fmt_bytes(inst.derived.runtime.process_resident_memory_bytes) }}</td>
+                </tr>
+
+                <tr>
+                  <th>Goroutines / OS threads</th>
+                  <td>
+                    {{ fmt_value(inst.derived.runtime.go_goroutines) }}
+                    /
+                    {{ fmt_value(inst.derived.runtime.go_threads) }}
+                  </td>
+                </tr>
+
+                <tr>
+                  <th>Open file descriptors</th>
+                  <td>
+                    {{ fmt_value(inst.derived.runtime.process_open_fds) }}
+                    /
+                    {{ fmt_value(inst.derived.runtime.process_max_fds) }}
+                  </td>
+                </tr>
+
+                <tr>
+                  <th>Network received</th>
+                  <td>{{ fmt_bytes(inst.derived.per_minute.received_bytes) }} per minute</td>
+                </tr>
+
+                <tr>
+                  <th>Network transmitted</th>
+                  <td>{{ fmt_bytes(inst.derived.per_minute.transmitted_bytes) }} per minute</td>
+                </tr>
+              </tbody>
+            </table>
+          </details>
+        {% endif %}
+      </section>
+    {% endfor %}
+  </main>
+
+  <!-- Prefer the local copy below for an internal monitor. -->
   <script src="/static/chart.umd.min.js"></script>
 
-	<script>
-	  function counterChanges(rows, key) {
-		let previous = null;
+  <script>
+    function counterChanges(rows, key) {
+      let previous = null;
 
-		return rows.map(row => {
-		  const current = Number(row[key] || 0);
+      return rows.map(function (row) {
+        const current = Number(row[key] || 0);
 
-		  if (previous === null) {
-			previous = current;
-			return 0;
-		  }
+        if (previous === null) {
+          previous = current;
+          return 0;
+        }
 
-		  let delta = current - previous;
+        let delta = current - previous;
 
-		  if (delta < 0) {
-			delta = current;
-		  }
+        /*
+         * Prometheus counters reset when Anubis restarts.
+         * In that case, use the new counter value as the interval increase.
+         */
+        if (delta < 0) {
+          delta = current;
+        }
 
-		  previous = current;
-		  return delta;
-		});
-	  }
+        previous = current;
+        return delta;
+      });
+    }
 
-	  document.querySelectorAll('script[id^="history-"]').forEach(source => {
-		const rows = JSON.parse(source.textContent);
-		const suffix = source.id.replace("history-", "");
-		const canvas = document.getElementById(`traffic-${suffix}`);
+    document.querySelectorAll('script[id^="history-"]').forEach(function (source) {
+      const rows = JSON.parse(source.textContent);
+      const suffix = source.id.replace("history-", "");
+      const canvas = document.getElementById("traffic-" + suffix);
 
-		if (!canvas || !rows.length) {
-		  return;
-		}
+      if (!canvas || rows.length < 2) {
+        return;
+      }
 
-		new Chart(canvas, {
-		  type: "line",
-		  data: {
-			labels: rows.map(row => row.time),
-			datasets: [
-			  {
-				label: "Challenges",
-				data: counterChanges(rows, "challenge"),
-				borderColor: "#d97706",
-				backgroundColor: "rgba(217, 119, 6, 0.12)",
-				fill: true,
-				tension: 0.2
-			  },
-			  {
-				label: "Denied",
-				data: counterChanges(rows, "deny"),
-				borderColor: "#b91c1c",
-				backgroundColor: "rgba(185, 28, 28, 0.10)",
-				fill: true,
-				tension: 0.2
-			  },
-			  {
-				label: "Proxied upstream",
-				data: counterChanges(rows, "proxied"),
-				borderColor: "#15803d",
-				backgroundColor: "rgba(21, 128, 61, 0.10)",
-				fill: true,
-				tension: 0.2
-			  }
-			]
-		  },
-		  options: {
-			responsive: true,
-			maintainAspectRatio: false,
-			interaction: {
-			  mode: "index",
-			  intersect: false
-			},
-			plugins: {
-			  legend: {
-				position: "top"
-			  }
-			},
-			scales: {
-			  x: {
-				ticks: {
-				  maxTicksLimit: 8
-				}
-			  },
-			  y: {
-				beginAtZero: true,
-				title: {
-				  display: true,
-				  text: "Events per monitor interval"
-				}
-			  }
-			}
-		  }
-		});
-	  });
-	</script>
+      if (typeof Chart === "undefined") {
+        console.error("Chart.js is not loaded: /static/chart.umd.min.js");
+        return;
+      }
+
+      new Chart(canvas, {
+        type: "line",
+
+        data: {
+          labels: rows.map(function (row) {
+            return row.time;
+          }),
+
+          datasets: [
+            {
+              label: "Challenges",
+              data: counterChanges(rows, "challenge"),
+              borderColor: "#d97706",
+              backgroundColor: "rgba(217, 119, 6, 0.12)",
+              fill: true,
+              tension: 0.2,
+              pointRadius: 1.5
+            },
+            {
+              label: "Denied",
+              data: counterChanges(rows, "deny"),
+              borderColor: "#b91c1c",
+              backgroundColor: "rgba(185, 28, 28, 0.10)",
+              fill: true,
+              tension: 0.2,
+              pointRadius: 1.5
+            },
+            {
+              label: "Proxied upstream",
+              data: counterChanges(rows, "proxied"),
+              borderColor: "#15803d",
+              backgroundColor: "rgba(21, 128, 61, 0.10)",
+              fill: true,
+              tension: 0.2,
+              pointRadius: 1.5
+            }
+          ]
+        },
+
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+
+          interaction: {
+            mode: "index",
+            intersect: false
+          },
+
+          plugins: {
+            legend: {
+              position: "top"
+            },
+
+            tooltip: {
+              callbacks: {
+                title: function (items) {
+                  return items.length ? items[0].label : "";
+                }
+              }
+            }
+          },
+
+          scales: {
+            x: {
+              ticks: {
+                autoSkip: true,
+                maxTicksLimit: 8,
+                maxRotation: 0
+              },
+              title: {
+                display: true,
+                text: "Local monitor time"
+              }
+            },
+
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Events per monitor interval"
+              }
+            }
+          }
+        }
+      });
+    });
+  </script>
 </body>
 </html>

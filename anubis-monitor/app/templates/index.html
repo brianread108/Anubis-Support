@@ -568,22 +568,31 @@
 				}
 			  },
 
-			  yOther: {
-				type: "linear",
+			yOther: {
+			  type: "linear",
+			  display: true,
+			  position: "right",
+			  beginAtZero: true,
+
+			  suggestedMin: 0,
+			  suggestedMax: 10,
+
+			  title: {
 				display: true,
-				position: "right",
-				beginAtZero: true,
+				text: "Denied / forwarded per monitor interval",
+				color: "#2563eb"
+			  },
 
-				title: {
-				  display: true,
-				  text: "Denied / forwarded per monitor interval",
-				  color: "#2563eb"
-				},
+			  ticks: {
+				color: "#2563eb",
+				precision: 0,
+				stepSize: 1
+			  },
 
-				ticks: {
-				  color: "#2563eb",
-				  precision: 0
-				},
+			  grid: {
+				drawOnChartArea: false
+			  }
+			}
 
 				/*
 				 * Do not draw a second set of horizontal grid lines.

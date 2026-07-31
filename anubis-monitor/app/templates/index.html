@@ -441,171 +441,166 @@
   <!-- Prefer the local copy below for an internal monitor. -->
   <script src="/static/chart.umd.min.js"></script>
 
-	<script>
-      function counterChanges(rows, key) {
-		  let previous = null;
+<script>
+  function counterChanges(rows, key) {
+    let previous = null;
 
-		  return rows.map(function (row) {
-			const current = Number(row[key] || 0);
+    return rows.map(function (row) {
+      const current = Number(row[key] || 0);
 
-			if (previous === null) {
-			  previous = current;
-			  return 0;
-			}
+      // The first record establishes the baseline only.
+      if (previous === null) {
+        previous = current;
+        return 0;
+      }
 
-			const delta = current - previous;
-			previous = current;
+      const delta = current - previous;
+      previous = current;
 
-			// Counter reset/relabel/restart: do not invent an interval spike.
-			return delta >= 0 ? delta : 0;
-		  });
-	  }
-	  document.querySelectorAll('script[id^="history-"]').forEach(function (source) {
-		const rows = JSON.parse(source.textContent);
-		const suffix = source.id.replace("history-", "");
-		const canvas = document.getElementById("traffic-" + suffix);
+      // A counter reset/relabel/restart must not become a false spike.
+      return delta >= 0 ? delta : 0;
+    });
+  }
 
-		if (!canvas || rows.length < 2) {
-		  return;
-		}
+  document.querySelectorAll('script[id^="history-"]').forEach(function (source) {
+    const rows = JSON.parse(source.textContent);
+    const suffix = source.id.replace("history-", "");
+    const canvas = document.getElementById("traffic-" + suffix);
 
-		if (typeof Chart === "undefined") {
-		  console.error("Chart.js is not loaded: /static/chart.umd.min.js");
-		  return;
-		}
+    if (!canvas || rows.length < 2) {
+      return;
+    }
 
-		new Chart(canvas, {
-		  type: "line",
+    if (typeof Chart === "undefined") {
+      console.error("Chart.js is not loaded: /static/chart.umd.min.js");
+      return;
+    }
 
-		  data: {
-			labels: rows.map(function (row) {
-			  return row.time;
-			}),
+    new Chart(canvas, {
+      type: "line",
 
-			datasets: [
-			  {
-				label: "Challenges",
-				data: counterChanges(rows, "challenge"),
-				yAxisID: "yChallenges",
-				borderColor: "#d97706",
-				backgroundColor: "rgba(217, 119, 6, 0.12)",
-				fill: true,
-				tension: 0.2,
-				pointRadius: 1.5,
-				borderWidth: 2
-			  },
-			  {
-				label: "Denied",
-				data: counterChanges(rows, "deny"),
-				yAxisID: "yOther",
-				borderColor: "#b91c1c",
-				backgroundColor: "rgba(185, 28, 28, 0.10)",
-				fill: false,
-				tension: 0.2,
-				pointRadius: 2,
-				borderWidth: 2
-			  },
-			  {
-				label: "Forwarded to upstream",
-				data: counterChanges(rows, "proxied"),
-				yAxisID: "yOther",
-				borderColor: "#15803d",
-				backgroundColor: "rgba(21, 128, 61, 0.10)",
-				fill: false,
-				tension: 0.2,
-				pointRadius: 2,
-				borderWidth: 2
-			  }
-			]
-		  },
+      data: {
+        labels: rows.map(function (row) {
+          return row.time;
+        }),
 
-		  options: {
-			responsive: true,
-			maintainAspectRatio: false,
+        datasets: [
+          {
+            label: "Challenges",
+            data: counterChanges(rows, "challenge"),
+            yAxisID: "yChallenges",
+            borderColor: "#d97706",
+            backgroundColor: "rgba(217, 119, 6, 0.12)",
+            fill: true,
+            tension: 0.2,
+            pointRadius: 1.5,
+            borderWidth: 2
+          },
+          {
+            label: "Denied",
+            data: counterChanges(rows, "deny"),
+            yAxisID: "yOther",
+            borderColor: "#b91c1c",
+            backgroundColor: "rgba(185, 28, 28, 0.10)",
+            fill: false,
+            tension: 0.2,
+            pointRadius: 2,
+            borderWidth: 2
+          },
+          {
+            label: "Forwarded to upstream",
+            data: counterChanges(rows, "proxied"),
+            yAxisID: "yOther",
+            borderColor: "#15803d",
+            backgroundColor: "rgba(21, 128, 61, 0.10)",
+            fill: false,
+            tension: 0.2,
+            pointRadius: 2,
+            borderWidth: 2
+          }
+        ]
+      },
 
-			interaction: {
-			  mode: "index",
-			  intersect: false
-			},
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
 
-			plugins: {
-			  legend: {
-				position: "top"
-			  }
-			},
+        interaction: {
+          mode: "index",
+          intersect: false
+        },
 
-			scales: {
-			  x: {
-				ticks: {
-				  autoSkip: true,
-				  maxTicksLimit: 8,
-				  maxRotation: 0
-				},
-				title: {
-				  display: true,
-				  text: "Local monitor time"
-				}
-			  },
+        plugins: {
+          legend: {
+            position: "top"
+          }
+        },
 
-			  yChallenges: {
-				type: "linear",
-				display: true,
-				position: "left",
-				beginAtZero: true,
+        scales: {
+          x: {
+            ticks: {
+              autoSkip: true,
+              maxTicksLimit: 8,
+              maxRotation: 0
+            },
+            title: {
+              display: true,
+              text: "Local monitor time"
+            }
+          },
 
-				title: {
-				  display: true,
-				  text: "Challenges per monitor interval",
-				  color: "#b45309"
-				},
+          yChallenges: {
+            type: "linear",
+            display: true,
+            position: "left",
+            beginAtZero: true,
 
-				ticks: {
-				  color: "#b45309"
-				},
+            title: {
+              display: true,
+              text: "Challenges per monitor interval",
+              color: "#b45309"
+            },
 
-				grid: {
-				  color: "rgba(0, 0, 0, 0.10)"
-				}
-			  },
+            ticks: {
+              color: "#b45309",
+              precision: 0
+            },
 
-			yOther: {
-			  type: "linear",
-			  display: true,
-			  position: "right",
-			  beginAtZero: true,
+            grid: {
+              color: "rgba(0, 0, 0, 0.10)"
+            }
+          },
 
-			  suggestedMin: 0,
-			  suggestedMax: 10,
+          yOther: {
+            type: "linear",
+            display: true,
+            position: "right",
+            beginAtZero: true,
 
-			  title: {
-				display: true,
-				text: "Denied / forwarded per monitor interval",
-				color: "#2563eb"
-			  },
+            suggestedMin: 0,
+            suggestedMax: 10,
 
-			  ticks: {
-				color: "#2563eb",
-				precision: 0,
-				stepSize: 1
-			  },
+            title: {
+              display: true,
+              text: "Denied / forwarded per monitor interval",
+              color: "#2563eb"
+            },
 
-			  grid: {
-				drawOnChartArea: false
-			  }
-			}
+            ticks: {
+              color: "#2563eb",
+              precision: 0,
+              stepSize: 1
+            },
 
-				/*
-				 * Do not draw a second set of horizontal grid lines.
-				 * The left-axis grid remains the visual reference.
-				 */
-				grid: {
-				  drawOnChartArea: false
-				}
-			  }
-			}
-		  }
-		});
-	  });
-	</script>
+            // Avoid a second set of horizontal grid lines.
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
 </body>
 </html>

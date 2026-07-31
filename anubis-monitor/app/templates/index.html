@@ -442,32 +442,24 @@
   <script src="/static/chart.umd.min.js"></script>
 
 	<script>
-	  function counterChanges(rows, key) {
-		let previous = null;
+      function counterChanges(rows, key) {
+		  let previous = null;
 
-		return rows.map(function (row) {
-		  const current = Number(row[key] || 0);
+		  return rows.map(function (row) {
+			const current = Number(row[key] || 0);
 
-		  if (previous === null) {
+			if (previous === null) {
+			  previous = current;
+			  return 0;
+			}
+
+			const delta = current - previous;
 			previous = current;
-			return 0;
-		  }
 
-		  let delta = current - previous;
-
-		  /*
-		   * Prometheus counters reset when Anubis restarts.
-		   * Treat the new value as the interval total in that case.
-		   */
-		  if (delta < 0) {
-			delta = current;
-		  }
-
-		  previous = current;
-		  return delta;
-		});
+			// Counter reset/relabel/restart: do not invent an interval spike.
+			return delta >= 0 ? delta : 0;
+		  });
 	  }
-
 	  document.querySelectorAll('script[id^="history-"]').forEach(function (source) {
 		const rows = JSON.parse(source.textContent);
 		const suffix = source.id.replace("history-", "");

@@ -89,18 +89,35 @@ def prune_history(db_path, days):
         )
 
 
-def history_rows(db_path, instance_name, hours):
+def history_rows(db_path, instance_name, hours, bucket_seconds=300):
     cutoff = int(time.time()) - (hours * 3600)
 
     with _connection(db_path) as connection:
         rows = connection.execute(
             """
-            SELECT *
-            FROM samples
-            WHERE instance = ? AND timestamp >= ?
-            ORDER BY timestamp
+            SELECT s.*
+            FROM samples AS s
+            JOIN (
+                SELECT
+                    instance,
+                    (timestamp / ?) * ? AS bucket,
+                    MAX(timestamp) AS latest_timestamp
+                FROM samples
+                WHERE instance = ? AND timestamp >= ?
+                GROUP BY instance, bucket
+            ) AS buckets
+              ON s.instance = buckets.instance
+             AND s.timestamp = buckets.latest_timestamp
+            WHERE s.instance = ?
+            ORDER BY s.timestamp
             """,
-            (instance_name, cutoff),
+            (
+                bucket_seconds,
+                bucket_seconds,
+                instance_name,
+                cutoff,
+                instance_name,
+            ),
         ).fetchall()
 
     output = []
@@ -123,7 +140,6 @@ def history_rows(db_path, instance_name, hours):
         })
 
     return output
-
 
 def period_delta(rows, field):
     if len(rows) < 2:

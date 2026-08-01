@@ -500,6 +500,8 @@
 			  borderWidth: 1, 
 			  barThickness: 3,
 			  maxBarThickness: 5,
+			  pointRadius: 0,
+			  pointHoverRadius: 4,
 			},
 			{
 			  label: "Denied",
@@ -510,6 +512,8 @@
 			  borderWidth: 1,
 			  barThickness: 3,
 			  maxBarThickness: 5,
+			  pointRadius: 0,
+			  pointHoverRadius: 4,
 			},
 			{
 			  label: "Forwarded to upstream",
@@ -520,6 +524,8 @@
 			  borderWidth: 1,
 			  barThickness: 3,
 			  maxBarThickness: 5,
+			  pointRadius: 0,
+			  pointHoverRadius: 4,
 			}
         ]
       },
@@ -541,6 +547,11 @@
 
         scales: {
 			x: {
+			    border: {
+				width: 1,
+				color: "#6b7280"
+			  },
+
 			  ticks: {
 				autoSkip: true,
 				maxTicksLimit: 8,

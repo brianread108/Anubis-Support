@@ -464,6 +464,12 @@
 
   document.querySelectorAll('script[id^="history-"]').forEach(function (source) {
     const rows = JSON.parse(source.textContent);
+	const firstDate = rows[0].time.split(" ")[0];
+	const lastDate = rows[rows.length - 1].time.split(" ")[0];
+
+	const dateRange = firstDate === lastDate
+	  ? firstDate
+	  : firstDate + " to " + lastDate;
     const suffix = source.id.replace("history-", "");
     const canvas = document.getElementById("traffic-" + suffix);
 
@@ -551,7 +557,7 @@
 
 			  title: {
 				display: true,
-				text: "Local monitor time — 31 Jul 2026 to 01 Aug 2026"
+				text: "Local monitor time —" + dateRange
 			  }
 			},
           yChallenges: {

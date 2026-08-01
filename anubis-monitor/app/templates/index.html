@@ -534,18 +534,26 @@
         },
 
         scales: {
-          x: {
-            ticks: {
-              autoSkip: true,
-              maxTicksLimit: 8,
-              maxRotation: 0
-            },
-            title: {
-              display: true,
-              text: "Local monitor time"
-            }
-          },
+			x: {
+			  ticks: {
+				autoSkip: true,
+				maxTicksLimit: 8,
+				maxRotation: 0,
 
+				callback: function (value) {
+				  const label = this.getLabelForValue(value);
+
+				  // Stored label format: YYYY-MM-DD HH:MM:SS BST
+				  const parts = label.split(" ");
+				  return parts.length >= 2 ? parts[1] : label;
+				}
+			  },
+
+			  title: {
+				display: true,
+				text: "Local monitor time — 31 Jul 2026 to 01 Aug 2026"
+			  }
+			}
           yChallenges: {
             type: "linear",
             display: true,

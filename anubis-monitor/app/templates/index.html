@@ -485,39 +485,36 @@
         }),
 
         datasets: [
-          {
-            label: "Challenges",
-            data: counterChanges(rows, "challenge"),
-            yAxisID: "yChallenges",
-            borderColor: "#d97706",
-            backgroundColor: "rgba(217, 119, 6, 0.12)",
-            fill: true,
-            tension: 0.2,
-            pointRadius: 1.5,
-            borderWidth: 2
-          },
-          {
-            label: "Denied",
-            data: counterChanges(rows, "deny"),
-            yAxisID: "yOther",
-            borderColor: "#b91c1c",
-            backgroundColor: "rgba(185, 28, 28, 0.10)",
-            fill: false,
-            tension: 0.2,
-            pointRadius: 2,
-            borderWidth: 2
-          },
-          {
-            label: "Forwarded to upstream",
-            data: counterChanges(rows, "proxied"),
-            yAxisID: "yOther",
-            borderColor: "#15803d",
-            backgroundColor: "rgba(21, 128, 61, 0.10)",
-            fill: false,
-            tension: 0.2,
-            pointRadius: 2,
-            borderWidth: 2
-          }
+			 {
+			  label: "Challenges",
+			  data: counterChanges(rows, "challenge"),
+			  yAxisID: "yChallenges",
+			  backgroundColor: "rgba(217, 119, 6, 0.85)",
+			  borderColor: "#92400e",
+			  borderWidth: 1, 
+			  barThickness: 3,
+			  maxBarThickness: 5,
+			},
+			{
+			  label: "Denied",
+			  data: counterChanges(rows, "deny"),
+			  yAxisID: "yOther",
+			  backgroundColor: "rgba(185, 28, 28, 0.85)",
+			  borderColor: "#7f1d1d",
+			  borderWidth: 1,
+			  barThickness: 3,
+			  maxBarThickness: 5,
+			},
+			{
+			  label: "Forwarded to upstream",
+			  data: counterChanges(rows, "proxied"),
+			  yAxisID: "yOther",
+			  backgroundColor: "rgba(21, 128, 61, 0.85)",
+			  borderColor: "#14532d",
+			  borderWidth: 1,
+			  barThickness: 3,
+			  maxBarThickness: 5,
+			}
         ]
       },
 

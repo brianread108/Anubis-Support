@@ -1,5 +1,15 @@
-refresh: 10
+refresh: 30
+timeout: 5
+history_db: data/anubis-monitor.sqlite3
+history_days: 30
+chart_hours: 24
 
 instances:
-  - name: mesdb
-    url: http://127.0.0.1:13002/metrics
+- name: bugs
+  url: http://127.0.0.1:19001/metrics
+- name: forums
+  url: http://127.0.0.1:19002/metrics
+- name: wiki
+  url: http://127.0.0.1:19003/metrics
+- name: gitea
+  url: http://127.0.0.1:19004/metrics

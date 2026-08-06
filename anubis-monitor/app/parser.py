@@ -89,6 +89,7 @@ def extract_anubis_summary(samples: List[Dict[str, object]]) -> Dict[str, object
         "challenges_by_method": {},
         "policy_results": {},
         "runtime": {},
+        "version": None,
     }
 
     runtime_metrics = {
@@ -125,6 +126,17 @@ def extract_anubis_summary(samples: List[Dict[str, object]]) -> Dict[str, object
             action = labels.get("action", "UNKNOWN")
             rule = labels.get("rule", "")
             summary["policy_results"][(action, rule)] = value
+
+        elif name in {"anubis_build_info", "anubis_info", "anubis_version_info"}:
+            summary["version"] = labels.get("version") or summary["version"]
+
+        elif (
+            name.startswith("anubis_")
+            and labels.get("version")
+            and summary["version"] is None
+        ):
+            # Support version-labelled Anubis metrics from older and custom builds.
+            summary["version"] = labels["version"]
 
         elif name in runtime_metrics:
             summary["runtime"][name] = value

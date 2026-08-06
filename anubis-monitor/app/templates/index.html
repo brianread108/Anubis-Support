@@ -138,10 +138,26 @@
       height: 340px;
       margin: 0.75rem 0 1.5rem;
       padding: 0.75rem;
+      overflow: hidden;
       border: 1px solid var(--border);
       border-radius: 0.45rem;
       background: var(--card);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .chart-scroll {
+      height: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .chart-stage {
+      height: 100%;
+      min-width: 100%;
+    }
+
+    .chart-stage canvas {
+      height: 100% !important;
     }
 
     details {
@@ -221,6 +237,7 @@
             — last successful scrape:
             {{ inst.last_seen.strftime("%Y-%m-%d %H:%M:%S %Z") }}
           {% endif %}
+          — Anubis version: {{ inst.version or "not reported" }}
         </p>
 
         {% if inst.error %}
@@ -312,14 +329,25 @@
             </div>
           </div>
 
-          <h3>Traffic trend: last {{ chart_hours }} hours</h3>
+          <h3>
+            Traffic trend: last {{ chart_hours }} hours
+            ({{ chart_bucket_seconds }}-second buckets)
+          </h3>
 
           {% if history_rows|length >= 2 %}
             <div class="chart-box">
-              <canvas id="traffic-{{ loop.index }}"></canvas>
+              <div class="chart-scroll">
+                <div class="chart-stage">
+                  <canvas id="traffic-{{ loop.index }}"></canvas>
+                </div>
+              </div>
             </div>
 
-            <script type="application/json" id="history-{{ loop.index }}">
+            <script
+              type="application/json"
+              id="history-{{ loop.index }}"
+              data-bucket-seconds="{{ chart_bucket_seconds }}"
+            >
               {{ history_rows | tojson }}
             </script>
           {% else %}
@@ -462,8 +490,26 @@
     });
   }
 
+  function configureChartWidth(canvas, rowCount) {
+    const chartBox = canvas.closest(".chart-box");
+    const chartStage = canvas.parentElement;
+
+    if (!chartBox || !chartStage) {
+      return 8;
+    }
+
+    // Keep each series legible. More buckets widen the scrollable chart,
+    // rather than reducing every bar to a sub-pixel sliver.
+    const pixelsPerBucket = rowCount >= 240 ? 18 : rowCount >= 120 ? 22 : rowCount >= 48 ? 28 : 36;
+    const availableWidth = Math.max(1, chartBox.clientWidth - 24);
+    chartStage.style.width = Math.max(availableWidth, rowCount * pixelsPerBucket) + "px";
+
+    return Math.max(4, Math.floor((pixelsPerBucket - 4) / 3));
+  }
+
   document.querySelectorAll('script[id^="history-"]').forEach(function (source) {
     const rows = JSON.parse(source.textContent);
+    const bucketSeconds = Number(source.dataset.bucketSeconds || 300);
 	const firstDate = rows[0].time.split(" ")[0];
 	const lastDate = rows[rows.length - 1].time.split(" ")[0];
 
@@ -482,8 +528,10 @@
       return;
     }
 
+    const barThickness = configureChartWidth(canvas, rows.length);
+
     new Chart(canvas, {
-      type: "line",
+      type: "bar",
 
       data: {
         labels: rows.map(function (row) {
@@ -495,9 +543,10 @@
 			  label: "Challenges",
 			  data: counterChanges(rows, "challenge"),
 			  yAxisID: "yChallenges",
-			  backgroundColor: "rgba(217, 119, 6, 0.85)",
-			  borderColor: "#92400e",
+			  backgroundColor: "rgba(245, 158, 11, 0.85)",
+			  borderColor: "#b45309",
 			  borderWidth: 1, 
+			  barThickness: barThickness,
 			  pointRadius: 0,
 			  pointHoverRadius: 4,
 			  categoryPercentage: 1.0,
@@ -507,9 +556,10 @@
 			  label: "Denied",
 			  data: counterChanges(rows, "deny"),
 			  yAxisID: "yOther",
-			  backgroundColor: "rgba(185, 28, 28, 0.85)",
-			  borderColor: "#7f1d1d",
+			  backgroundColor: "rgba(190, 24, 93, 0.85)",
+			  borderColor: "#9d174d",
 			  borderWidth: 1,
+			  barThickness: barThickness,
 			  pointRadius: 0,
 			  pointHoverRadius: 4,
 			  categoryPercentage: 1.0,
@@ -519,9 +569,10 @@
 			  label: "Forwarded to upstream",
 			  data: counterChanges(rows, "proxied"),
 			  yAxisID: "yOther",
-			  backgroundColor: "rgba(21, 128, 61, 0.85)",
-			  borderColor: "#14532d",
+			  backgroundColor: "rgba(8, 145, 178, 0.85)",
+			  borderColor: "#0e7490",
 			  borderWidth: 1,
+			  barThickness: barThickness,
 			  pointRadius: 0,
 			  pointHoverRadius: 4,
 			  categoryPercentage: 1.0,
@@ -542,6 +593,17 @@
         plugins: {
           legend: {
             position: "top"
+          },
+          title: {
+            display: true,
+            text: "Traffic per " + bucketSeconds + "-second bucket"
+          },
+          tooltip: {
+            callbacks: {
+              footer: function () {
+                return "Bucket size: " + bucketSeconds + " seconds";
+              }
+            }
           }
         },
 
@@ -579,7 +641,7 @@
 
             title: {
               display: true,
-              text: "Challenges per monitor interval",
+              text: "Challenges per " + bucketSeconds + "-second bucket",
               color: "#b45309"
             },
 
@@ -600,16 +662,16 @@
             beginAtZero: true,
 
             suggestedMin: 0,
-            suggestedMax: 10,
+            suggestedMax: 4,
 
             title: {
               display: true,
-              text: "Denied / forwarded per monitor interval",
-              color: "#2563eb"
+              text: "Denied / forwarded per " + bucketSeconds + "-second bucket",
+              color: "#0e7490"
             },
 
             ticks: {
-              color: "#2563eb",
+              color: "#0e7490",
               precision: 0,
               stepSize: 1
             },

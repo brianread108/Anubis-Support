@@ -202,6 +202,7 @@ async def poll_instance(instance, timeout, previous_status=None):
             raw_samples=samples,
             summary=summary,
             derived=derived,
+            version=summary.get("version") or instance.version,
         )
 
     except Exception as exc:
@@ -276,6 +277,7 @@ async def index(request: Request):
             config.history_db,
             instance.name,
             config.chart_hours,
+            config.chart_bucket_seconds,
         )
 
         history[instance.name] = {
@@ -296,6 +298,7 @@ async def index(request: Request):
             "history": history,
             "refresh": config.refresh,
             "chart_hours": config.chart_hours,
+            "chart_bucket_seconds": config.chart_bucket_seconds,
             "last_updated": STATE.last_updated,
             "config_error": STATE.config_error,
             "status_label": status_label,

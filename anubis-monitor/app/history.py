@@ -89,7 +89,7 @@ def prune_history(db_path, days):
         )
 
 
-def history_rows(db_path, instance_name, hours, bucket_seconds=300):
+def history_rows(db_path, instance_name, hours, bucket_seconds):
     cutoff = int(time.time()) - (hours * 3600)
 
     with _connection(db_path) as connection:

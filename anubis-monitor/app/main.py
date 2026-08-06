@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -64,6 +65,25 @@ def fmt_duration(seconds):
     if hours:
         return f"{hours}h {minutes}m"
     return f"{minutes}m {seconds}s"
+
+
+def installed_anubis_version():
+    try:
+        result = subprocess.run(
+            ["anubis", "--version"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    output = result.stdout.strip() or result.stderr.strip()
+    return output.splitlines()[0] if output else None
 
 
 def status_label(status):
@@ -202,7 +222,6 @@ async def poll_instance(instance, timeout, previous_status=None):
             raw_samples=samples,
             summary=summary,
             derived=derived,
-            version=summary.get("version") or instance.version,
         )
 
     except Exception as exc:
@@ -247,6 +266,7 @@ async def refresh_loop():
 async def lifespan(app: FastAPI):
     config = load_config(CONFIG_PATH)
     initialise(config.history_db)
+    STATE.anubis_version = installed_anubis_version()
 
     app.state.refresh_task = asyncio.create_task(refresh_loop())
     try:
@@ -299,6 +319,7 @@ async def index(request: Request):
             "refresh": config.refresh,
             "chart_hours": config.chart_hours,
             "chart_bucket_seconds": config.chart_bucket_seconds,
+            "anubis_version": STATE.anubis_version,
             "last_updated": STATE.last_updated,
             "config_error": STATE.config_error,
             "status_label": status_label,

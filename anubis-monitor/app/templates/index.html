@@ -138,26 +138,10 @@
       height: 340px;
       margin: 0.75rem 0 1.5rem;
       padding: 0.75rem;
-      overflow: hidden;
       border: 1px solid var(--border);
       border-radius: 0.45rem;
       background: var(--card);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    }
-
-    .chart-scroll {
-      height: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-    }
-
-    .chart-stage {
-      height: 100%;
-      min-width: 100%;
-    }
-
-    .chart-stage canvas {
-      height: 100% !important;
     }
 
     details {
@@ -215,6 +199,7 @@
       {{ last_updated.strftime("%Y-%m-%d %H:%M:%S %Z") if last_updated else "-" }}.
       Page refresh: every {{ refresh }} seconds.
       “New” and “per minute” values are calculated from the preceding successful scrape.
+      Anubis version: {{ anubis_version or "unavailable" }}.
     </p>
 
     {% if not instances %}
@@ -237,7 +222,6 @@
             — last successful scrape:
             {{ inst.last_seen.strftime("%Y-%m-%d %H:%M:%S %Z") }}
           {% endif %}
-          — Anubis version: {{ inst.version or "not reported" }}
         </p>
 
         {% if inst.error %}
@@ -336,11 +320,7 @@
 
           {% if history_rows|length >= 2 %}
             <div class="chart-box">
-              <div class="chart-scroll">
-                <div class="chart-stage">
-                  <canvas id="traffic-{{ loop.index }}"></canvas>
-                </div>
-              </div>
+              <canvas id="traffic-{{ loop.index }}"></canvas>
             </div>
 
             <script
@@ -490,23 +470,6 @@
     });
   }
 
-  function configureChartWidth(canvas, rowCount) {
-    const chartBox = canvas.closest(".chart-box");
-    const chartStage = canvas.parentElement;
-
-    if (!chartBox || !chartStage) {
-      return 8;
-    }
-
-    // Keep each series legible. More buckets widen the scrollable chart,
-    // rather than reducing every bar to a sub-pixel sliver.
-    const pixelsPerBucket = rowCount >= 240 ? 18 : rowCount >= 120 ? 22 : rowCount >= 48 ? 28 : 36;
-    const availableWidth = Math.max(1, chartBox.clientWidth - 24);
-    chartStage.style.width = Math.max(availableWidth, rowCount * pixelsPerBucket) + "px";
-
-    return Math.max(4, Math.floor((pixelsPerBucket - 4) / 3));
-  }
-
   document.querySelectorAll('script[id^="history-"]').forEach(function (source) {
     const rows = JSON.parse(source.textContent);
     const bucketSeconds = Number(source.dataset.bucketSeconds || 300);
@@ -528,8 +491,6 @@
       return;
     }
 
-    const barThickness = configureChartWidth(canvas, rows.length);
-
     new Chart(canvas, {
       type: "bar",
 
@@ -546,11 +507,12 @@
 			  backgroundColor: "rgba(245, 158, 11, 0.85)",
 			  borderColor: "#b45309",
 			  borderWidth: 1, 
-			  barThickness: barThickness,
+			  stack: "challenges",
+			  categoryPercentage: 1.0,
+			  barPercentage: 1.0,
+			  maxBarThickness: 24,
 			  pointRadius: 0,
 			  pointHoverRadius: 4,
-			  categoryPercentage: 1.0,
-			  barPercentage: 0.90,
 			},
 			{
 			  label: "Denied",
@@ -559,11 +521,12 @@
 			  backgroundColor: "rgba(190, 24, 93, 0.85)",
 			  borderColor: "#9d174d",
 			  borderWidth: 1,
-			  barThickness: barThickness,
+			  stack: "other",
+			  categoryPercentage: 1.0,
+			  barPercentage: 1.0,
+			  maxBarThickness: 24,
 			  pointRadius: 0,
 			  pointHoverRadius: 4,
-			  categoryPercentage: 1.0,
-			  barPercentage: 0.90,
 			},
 			{
 			  label: "Forwarded to upstream",
@@ -572,11 +535,12 @@
 			  backgroundColor: "rgba(8, 145, 178, 0.85)",
 			  borderColor: "#0e7490",
 			  borderWidth: 1,
-			  barThickness: barThickness,
+			  stack: "other",
+			  categoryPercentage: 1.0,
+			  barPercentage: 1.0,
+			  maxBarThickness: 24,
 			  pointRadius: 0,
 			  pointHoverRadius: 4,
-			  categoryPercentage: 1.0,
-			  barPercentage: 0.90,
 			}
         ]
       },

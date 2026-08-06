@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Union
 
 import yaml
 
@@ -9,7 +9,6 @@ import yaml
 class InstanceConfig:
     name: str
     url: str
-    version: Optional[str] = None
 
 
 @dataclass
@@ -36,14 +35,7 @@ def load_config(path: Union[str, Path]) -> AppConfig:
         name = item.get("name")
         url = item.get("url")
         if name and url:
-            version = item.get("version")
-            instances.append(
-                InstanceConfig(
-                    name=name,
-                    url=url,
-                    version=str(version) if version is not None else None,
-                )
-            )
+            instances.append(InstanceConfig(name=name, url=url))
 
     return AppConfig(
         refresh=max(5, int(raw.get("refresh", 30))),

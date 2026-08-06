@@ -13,7 +13,6 @@ class InstanceStatus:
     raw_samples: List[Dict[str, object]] = field(default_factory=list)
     summary: Dict[str, object] = field(default_factory=dict)
     derived: Dict[str, object] = field(default_factory=dict)
-    version: Optional[str] = None
 
 
 @dataclass
@@ -21,6 +20,7 @@ class MonitorState:
     last_updated: Optional[datetime] = None
     instances: List[InstanceStatus] = field(default_factory=list)
     config_error: Optional[str] = None
+    anubis_version: Optional[str] = None
 
 
 STATE = MonitorState()

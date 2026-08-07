@@ -3,6 +3,7 @@ timeout: 5
 history_db: data/anubis-monitor.sqlite3
 history_days: 30
 chart_hours: 24
+chart_bucket_seconds: 300
 
 instances:
 - name: bugs

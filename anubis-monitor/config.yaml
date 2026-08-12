@@ -1,4 +1,4 @@
-refresh: 30
+refresh: 300
 timeout: 5
 history_db: data/anubis-monitor.sqlite3
 history_days: 30

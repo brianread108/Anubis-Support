@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="{{ refresh }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Anubis Monitor</title>
@@ -135,6 +134,7 @@
     }
 
     .chart-box {
+      position: relative;
       height: 340px;
       margin: 0.75rem 0 1.5rem;
       padding: 0.75rem;
@@ -165,6 +165,99 @@
       color: var(--muted);
     }
 
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 0.75rem 0 1.25rem;
+    }
+
+    .toc-item {
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.92rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .toc-item:hover {
+      background: #e5e7eb;
+    }
+
+    .meta-list {
+      list-style: none;
+      margin: 0.4rem 0 1.25rem;
+      padding: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .meta-list li {
+      margin: 0.15rem 0;
+    }
+
+    .meta-list li strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .site-footer {
+      margin: 2.5rem auto 0;
+      max-width: 1400px;
+      padding: 1rem 0 0.5rem;
+      text-align: center;
+      color: #aab2bd;
+      font-size: 0.8rem;
+    }
+
+    .refresh-wipe {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      overflow: hidden;
+    }
+
+    .refresh-wipe::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 45%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.28), transparent);
+      transform: translateX(-120%);
+    }
+
+    .refresh-wipe.active::before {
+      transform: translateX(220%);
+      transition: transform 0.6s ease-in-out;
+    }
+
+    .export-btn {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.6rem;
+      z-index: 5;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.78rem;
+      border: 1px solid var(--border);
+      border-radius: 0.35rem;
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .export-btn:hover {
+      background: #e5e7eb;
+    }
+
     @media (max-width: 700px) {
       body {
         padding: 1rem;
@@ -187,20 +280,30 @@
 </head>
 
 <body>
+  <div id="refresh-wipe" class="refresh-wipe"></div>
+
   <main>
     <h1>Anubis Monitor</h1>
+
+    {% if instances %}
+      <nav class="toc">
+        {% for inst in instances %}
+          <a class="toc-item {{ status_label(inst) }}" href="#instance-{{ inst.name }}">
+            {{ status_icon(inst) }} {{ inst.name }}
+          </a>
+        {% endfor %}
+      </nav>
+    {% endif %}
 
     {% if config_error %}
       <p class="error">Monitor error: {{ config_error }}</p>
     {% endif %}
 
-    <p class="muted">
-      Last updated:
-      {{ last_updated.strftime("%Y-%m-%d %H:%M:%S %Z") if last_updated else "-" }}.
-      Page refresh: every {{ refresh }} seconds.
-      “New” and “per minute” values are calculated from the preceding successful scrape.
-      Anubis version: {{ anubis_version or "unavailable" }}.
-    </p>
+    <ul class="meta-list">
+      <li><strong>Last updated:</strong> {{ last_updated.strftime("%Y-%m-%d %H:%M:%S %Z") if last_updated else "-" }}</li>
+      <li><strong>Page refresh:</strong> every {{ refresh }} seconds</li>
+      <li>“New” and “per minute” values are calculated from the preceding successful scrape.</li>
+    </ul>
 
     {% if not instances %}
       <p class="no-data">No Anubis instances are configured.</p>
@@ -210,7 +313,7 @@
       {% set hist = history.get(inst.name, {}) %}
       {% set history_rows = hist.get("rows", []) %}
 
-      <section>
+      <section id="instance-{{ inst.name }}">
         <h2>
           {{ status_icon(inst) }}
           <span class="{{ status_label(inst) }}">{{ inst.name }}</span>
@@ -314,12 +417,18 @@
           </div>
 
           <h3>
-            Traffic trend: last {{ chart_hours }} hours
+            {{ inst.name }} — Traffic trend: last {{ chart_hours }} hours
             ({{ chart_bucket_seconds }}-second buckets)
           </h3>
 
           {% if history_rows|length >= 2 %}
             <div class="chart-box">
+              <button
+                type="button"
+                class="export-btn"
+                data-export-target="traffic-{{ loop.index }}"
+                data-export-name="{{ inst.name }}-traffic-trend"
+              >Export PNG</button>
               <canvas id="traffic-{{ loop.index }}"></canvas>
             </div>
 
@@ -327,6 +436,7 @@
               type="application/json"
               id="history-{{ loop.index }}"
               data-bucket-seconds="{{ chart_bucket_seconds }}"
+              data-instance-name="{{ inst.name }}"
             >
               {{ history_rows | tojson }}
             </script>
@@ -446,6 +556,10 @@
     {% endfor %}
   </main>
 
+  <footer class="site-footer">
+    Anubis version: {{ anubis_version or "unavailable" }}
+  </footer>
+
   <!-- Prefer the local copy below for an internal monitor. -->
   <script src="/static/chart.umd.min.js"></script>
 
@@ -481,6 +595,7 @@
 	  : firstDate + " to " + lastDate;
     const suffix = source.id.replace("history-", "");
     const canvas = document.getElementById("traffic-" + suffix);
+    const instanceName = source.dataset.instanceName || "";
 
     if (!canvas || rows.length < 2) {
       return;
@@ -491,7 +606,7 @@
       return;
     }
 
-    new Chart(canvas, {
+    const chart = new Chart(canvas, {
       type: "bar",
 
       data: {
@@ -560,7 +675,7 @@
           },
           title: {
             display: true,
-            text: "Traffic per " + bucketSeconds + "-second bucket"
+            text: (instanceName ? instanceName + " — " : "") + "Traffic per " + bucketSeconds + "-second bucket"
           },
           tooltip: {
             callbacks: {
@@ -631,11 +746,11 @@
             title: {
               display: true,
               text: "Denied / forwarded per " + bucketSeconds + "-second bucket",
-              color: "#0e7490"
+              color: "#9d174d"
             },
 
             ticks: {
-              color: "#0e7490",
+              color: "#9d174d",
               precision: 0,
               stepSize: 1
             },
@@ -648,7 +763,46 @@
         }
       }
     });
+
+    window.__anubisCharts = window.__anubisCharts || {};
+    window.__anubisCharts[canvas.id] = chart;
   });
+
+  document.querySelectorAll(".export-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const targetId = btn.dataset.exportTarget;
+      const chart = window.__anubisCharts && window.__anubisCharts[targetId];
+
+      if (!chart) {
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = chart.toBase64Image();
+      link.download = (btn.dataset.exportName || "chart") + ".png";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    });
+  });
+
+  (function () {
+    const refreshSeconds = Number("{{ refresh }}") || 30;
+    const wipeEl = document.getElementById("refresh-wipe");
+
+    function wipeAndReload() {
+      if (wipeEl) {
+        wipeEl.classList.add("active");
+      }
+
+      // Let the wipe sweep across the screen before the page actually reloads.
+      window.setTimeout(function () {
+        window.location.reload();
+      }, 600);
+    }
+
+    window.setTimeout(wipeAndReload, Math.max(1, refreshSeconds) * 1000);
+  })();
 </script>
 </body>
 </html>

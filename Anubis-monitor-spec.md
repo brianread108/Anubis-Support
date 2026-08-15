@@ -1,7 +1,3 @@
-Here is a clean **project specification document** for the Anubis Monitor. I’ve written it as something you could drop straight into a Git repository as `SPEC.md` and review before any implementation.
-
----
-
 # Anubis Monitor — Project Specification
 
 ## 1. Overview
@@ -332,11 +328,4 @@ The system prioritises:
 It is intentionally opinionated: it shows what an operator needs to know in seconds, not everything that *could* be known.
 
 ---
-
-If you want, next step I can turn this into:
-
-* a repo scaffold (all files created)
-* or Phase 1 implementation starting from `main.py` + scraper first
-
-Just say which direction you prefer.
 

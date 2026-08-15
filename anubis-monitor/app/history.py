@@ -142,11 +142,30 @@ def history_rows(db_path, instance_name, hours, bucket_seconds):
     return output
 
 def period_delta(rows, field):
+    """Sum the true increase in a cumulative counter across the window.
+
+    Prometheus counters reset to zero whenever the scraped Anubis process
+    restarts. A naive ``last - first`` comparison across the whole window
+    silently discards everything accumulated before a mid-window restart
+    (it looks like the totals "disappeared"). Instead we walk consecutive
+    samples and sum each incremental step, treating any decrease as a
+    counter reset: the post-reset sample's own value is the amount
+    accumulated since the restart, so it is added in full rather than
+    subtracted from the previous (pre-restart) value.
+    """
     if len(rows) < 2:
         return 0
 
-    first = rows[0].get(field) or 0
-    last = rows[-1].get(field) or 0
+    total = 0.0
+    previous = rows[0].get(field) or 0
 
-    # Counters fall only after an Anubis restart.
-    return last if last < first else last - first
+    for row in rows[1:]:
+        current = row.get(field) or 0
+        delta = current - previous
+
+        # A drop means the counter was reset by an Anubis restart between
+        # these two samples; `current` is everything accrued since then.
+        total += current if delta < 0 else delta
+        previous = current
+
+    return total

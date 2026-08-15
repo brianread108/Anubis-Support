@@ -81,6 +81,8 @@ Full design notes live in [`anubis-monitor/SPEC.md`](anubis-monitor/SPEC.md).
 
 Anubis Monitor is a small [FastAPI](https://fastapi.tiangolo.com/) application (`anubis-monitor/app/main.py`) that serves one auto-refreshing dashboard page at `/`, plus a `/static` mount for its assets (favicon and a bundled copy of Chart.js). By convention on this project's infrastructure it runs on **port 8000** (see the note in `bugs.koozali.org.params`), typically co-located on the same host as the Anubis instances it watches.
 
+![Example graph](example%20graph.png)
+
 For each configured instance, the dashboard shows:
 
 - A status header with a colour-coded indicator (🟢 healthy / 🟠 degraded / 🔴 down) and the last successful scrape time.

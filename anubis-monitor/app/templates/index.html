@@ -170,7 +170,16 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 0.5rem;
-      margin: 0.75rem 0 1.25rem;
+      margin: 0 0 1.25rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(248, 250, 252, 0.95);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+      padding: 0.75rem 0.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+      border-bottom: 1px solid var(--border);
     }
 
     .toc-item {
@@ -205,6 +214,31 @@
     .meta-list li strong {
       color: var(--text);
       font-weight: 600;
+    }
+
+    .section-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.5rem 0 1rem;
+    }
+
+    .nav-btn {
+      padding: 0.4rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.88rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      background: #e5e7eb;
     }
 
     .site-footer {
@@ -275,6 +309,15 @@
       .chart-box {
         height: 280px;
       }
+
+      .toc {
+        padding: 0.5rem 0.25rem;
+      }
+
+      .nav-btn {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.82rem;
+      }
     }
   </style>
 </head>
@@ -314,6 +357,21 @@
       {% set history_rows = hist.get("rows", []) %}
 
       <section id="instance-{{ inst.name }}">
+        {% if instances|length > 1 %}
+          <div class="section-nav">
+            <a
+              class="nav-btn"
+              href="#instance-{{ loop.previtem.name if loop.previtem else instances[-1].name }}"
+              title="Previous: {{ loop.previtem.name if loop.previtem else instances[-1].name }}"
+            >&larr; Previous</a>
+            <a
+              class="nav-btn"
+              href="#instance-{{ loop.nextitem.name if loop.nextitem else instances[0].name }}"
+              title="Next: {{ loop.nextitem.name if loop.nextitem else instances[0].name }}"
+            >Next &rarr;</a>
+          </div>
+        {% endif %}
+
         <h2>
           {{ status_icon(inst) }}
           <span class="{{ status_label(inst) }}">{{ inst.name }}</span>
